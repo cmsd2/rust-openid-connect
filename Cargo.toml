@@ -1,0 +1,24 @@
+[package]
+name = "openid-connect"
+version = "0.1.0"
+authors = ["Chris Dawes <cmsd2@cantab.net>"]
+
+[dependencies]
+iron = "*"
+logger = "*"
+router = "*"
+quick-error = "*"
+
+log = "*"
+env_logger = "*"
+
+[dev_dependencies]
+
+[[bin]]
+name = "server"
+
+[[example]]
+name = "rp_server"
+
+[[example]]
+name = "rp_client"
