@@ -1,9 +1,21 @@
+extern crate iron;
 #[macro_use] extern crate quick_error;
 
 pub mod result;
 
+#[derive(Copy, Clone, Debug)]
 pub enum ResponseType {
     Code,
+}
+
+#[derive(Clone, Debug)]
+pub struct AuthorizeRequest {
+    response_type: ResponseType,
+    scopes: Vec<String>,
+    client_id: String,
+    state: String,
+    // nonce: String, // ?
+    redirect_uri: String, // or url type?
 }
     
 #[cfg(test)]

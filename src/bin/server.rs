@@ -8,19 +8,28 @@ extern crate logger;
 extern crate env_logger;
 
 use iron::prelude::*;
+use iron::status;
 use router::Router;
 use logger::Logger;
 use logger::format::Format;
+
+use openid_connect::{AuthorizeRequest};
+use openid_connect::result::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
         "{method} {uri} -> {status} ({response-time} ms)";
 
-pub fn authorize_handler(_req: &mut Request) -> IronResult<Response> {
+pub fn parse_authorize_request(req: &Request) -> Result<AuthorizeRequest> {
+    Err(OpenIdConnectError::NotImplemented)
+}
+
+pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     debug!("Ok");
+    let _authorize_request = try!(parse_authorize_request(req));
     Ok(Response::with((iron::status::Ok, "Ok")))
 }
-    
+
 pub fn main() {
     env_logger::init().unwrap();
     let format = Format::new(FORMAT, vec![], vec![]);
