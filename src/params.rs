@@ -24,24 +24,37 @@ quick_error! {
 pub type ParamsResult<T> = result::Result<T,ParamError>;
 
 pub fn multimap_get<'a>(mm: &'a HashMap<String, Vec<String>>, key: &str) -> ParamsResult<&'a Vec<String>> {
-    match mm.get(key) {
-        Some(values) => {
-            if values.is_empty() {
-                Err(ParamError::NotFound(Box::new(key.to_owned())))
-            } else {
-                Ok(values)
-            }
-        },
-        None => Err(ParamError::NotFound(Box::new(key.to_owned())))
-    }
+    multimap_get_maybe(mm, key).ok_or(ParamError::NotFound(Box::new(key.to_owned())))
 }
 
 pub fn multimap_get_one<'a>(mm: &'a HashMap<String, Vec<String>>, key: &str) -> ParamsResult<&'a str> {
-    let values = try!(multimap_get(mm, key));
+    let maybe_one = try!(multimap_get_maybe_one(mm, key));
     
-    if values.len() == 1 {
-        Ok(values.first().map(|s| &s[..]).unwrap())
-    } else {
-        Err(ParamError::MultipleValues(Box::new(key.to_owned())))
+    maybe_one.ok_or(ParamError::NotFound(Box::new(key.to_owned())))
+}
+
+pub fn multimap_get_maybe<'a>(mm: &'a HashMap<String, Vec<String>>, key: &str) -> Option<&'a Vec<String>> {
+    match mm.get(key) {
+        Some(values) => {
+            if values.is_empty() {
+                None
+            } else {
+                Some(values)
+            }
+        },
+        None => None
+    }
+}
+
+pub fn multimap_get_maybe_one<'a>(mm: &'a HashMap<String, Vec<String>>, key: &str) -> ParamsResult<Option<&'a str>> {
+    match multimap_get_maybe(mm, key) {
+        Some(values) => {
+            if values.len() == 1 {
+                Ok(Some(values.first().map(|s| &s[..]).unwrap()))
+            } else {
+                Err(ParamError::MultipleValues(Box::new(key.to_owned())))
+            }
+        },
+        None => Ok(None)
     }
 }

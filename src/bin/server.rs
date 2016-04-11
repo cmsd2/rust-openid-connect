@@ -43,6 +43,7 @@ pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     debug!("Ok");
     let authorize_request = try!(parse_authorize_request(req));
     debug!("authorize: {:?}", authorize_request);
+    //TODO validate subject claim
     Ok(Response::with((iron::status::Ok, "Ok")))
 }
 

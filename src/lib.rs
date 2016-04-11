@@ -31,6 +31,7 @@ pub struct AuthorizeRequest {
     state: String,
     // nonce: String, // ?
     redirect_uri: String, // or url type?
+    prompt: Option<String>,
 }
 
 impl AuthorizeRequest {
@@ -40,6 +41,7 @@ impl AuthorizeRequest {
         let client_id = try!(multimap_get_one(hashmap, "client_id"));
         let state = try!(multimap_get_one(hashmap, "state"));
         let redirect_uri = try!(multimap_get_one(hashmap, "redirect_uri"));
+        let prompt = try!(multimap_get_maybe_one(hashmap, "prompt"));
     
         Ok(AuthorizeRequest {
             response_type: try!(ResponseType::from_str(response_type)),
@@ -47,6 +49,7 @@ impl AuthorizeRequest {
             client_id: client_id.to_owned(),
             state: state.to_owned(),
             redirect_uri: redirect_uri.to_owned(),
+            prompt: prompt.map(|s| s.to_owned()),
         })
     }
     
