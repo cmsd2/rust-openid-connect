@@ -10,6 +10,7 @@ extern crate env_logger;
 
 use iron::prelude::*;
 use iron::status;
+use iron::{AfterMiddleware};
 use router::Router;
 use logger::Logger;
 use logger::format::Format;
@@ -26,15 +27,35 @@ static FORMAT: &'static str =
 pub fn parse_authorize_request(req: &mut Request) -> Result<AuthorizeRequest> {
     let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
     
-    let response_type = try!(multimap_get_one(hashmap, "response_type"));
+    //TODO validate supplied oauth2 params
     
-    Err(OpenIdConnectError::NotImplemented)
+    let auth_req = try!(AuthorizeRequest::from_params(hashmap));
+    let openid_scope = "openid";
+    
+    if !auth_req.has_scope(openid_scope) {
+        Err(OpenIdConnectError::ScopeNotFound(Box::new(openid_scope.to_owned())))
+    } else {
+        Ok(auth_req)
+    }
 }
 
 pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     debug!("Ok");
-    let _authorize_request = try!(parse_authorize_request(req));
+    let authorize_request = try!(parse_authorize_request(req));
+    debug!("authorize: {:?}", authorize_request);
     Ok(Response::with((iron::status::Ok, "Ok")))
+}
+
+struct ErrorRenderer;
+
+impl AfterMiddleware for ErrorRenderer {
+    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
+        debug!("{:?} caught in ErrorRecover AfterMiddleware.", &err);
+        
+        let new_body = format!("{}", err);
+        
+        Ok(err.response.set(new_body))
+    }
 }
 
 pub fn main() {
@@ -50,6 +71,7 @@ pub fn main() {
     
     chain.link_before(logger_before);
     chain.link_after(logger_after);
+    chain.link_after(ErrorRenderer);
     
     Iron::new(chain).http("localhost:3000").unwrap();
 }

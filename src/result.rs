@@ -21,6 +21,11 @@ quick_error! {
             display("Unknown response_type: {}", response_type.as_ref())
         }
         
+        ScopeNotFound(scope: Box<String>) {
+            description("scope not found")
+            display("Scope not found: {}", scope)
+        }
+        
         NotImplemented {
             description("not implemented")
             display("Not implemented")
@@ -47,6 +52,7 @@ pub fn error_status_code(oic_err: &OpenIdConnectError) -> status::Status {
         OpenIdConnectError::UrlDecodingError(ref _err) => status::BadRequest,
         OpenIdConnectError::UnknownResponseType(ref _response_type) => status::BadRequest,
         OpenIdConnectError::ParamError(ref _response_type) => status::BadRequest,
+        OpenIdConnectError::ScopeNotFound(ref _scope) => status::BadRequest,
         _ => status::InternalServerError
     }
 }
