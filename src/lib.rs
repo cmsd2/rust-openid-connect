@@ -1,7 +1,9 @@
 extern crate iron;
+extern crate urlencoded;
 #[macro_use] extern crate quick_error;
 
 pub mod result;
+pub mod params;
 
 #[derive(Copy, Clone, Debug)]
 pub enum ResponseType {

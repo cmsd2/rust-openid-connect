@@ -3,6 +3,7 @@ extern crate openid_connect;
 extern crate iron;
 extern crate router;
 extern crate logger;
+extern crate urlencoded;
 
 #[macro_use] extern crate log;
 extern crate env_logger;
@@ -12,15 +13,21 @@ use iron::status;
 use router::Router;
 use logger::Logger;
 use logger::format::Format;
+use urlencoded::UrlEncodedQuery;
 
 use openid_connect::{AuthorizeRequest};
 use openid_connect::result::*;
+use openid_connect::params::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
         "{method} {uri} -> {status} ({response-time} ms)";
-
-pub fn parse_authorize_request(req: &Request) -> Result<AuthorizeRequest> {
+    
+pub fn parse_authorize_request(req: &mut Request) -> Result<AuthorizeRequest> {
+    let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
+    
+    let response_type = try!(multimap_get_one(hashmap, "response_type"));
+    
     Err(OpenIdConnectError::NotImplemented)
 }
 

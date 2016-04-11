@@ -7,6 +7,7 @@ authors = ["Chris Dawes <cmsd2@cantab.net>"]
 iron = "*"
 logger = "*"
 router = "*"
+urlencoded = "*"
 quick-error = "*"
 
 log = "*"

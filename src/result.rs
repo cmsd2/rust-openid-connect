@@ -3,6 +3,8 @@ use std::io;
 
 use iron::prelude::*;
 use iron::status;
+use urlencoded;
+use params;
 
 quick_error! {
     #[derive(Debug)]
@@ -23,11 +25,28 @@ quick_error! {
             description("not implemented")
             display("Not implemented")
         }
+        
+        UrlDecodingError(err: urlencoded::UrlDecodingError) {
+            from()
+            description("url decoding error")
+            display("Url decoding error: {}", err)
+            cause(err)
+        }
+        
+        ParamError(err: params::ParamError) {
+            from()
+            description("param error")
+            display("Param error: {}", err)
+            cause(err)
+        }
     }
 }
 
 pub fn error_status_code(oic_err: &OpenIdConnectError) -> status::Status {
-    match oic_err {
+    match *oic_err {
+        OpenIdConnectError::UrlDecodingError(ref _err) => status::BadRequest,
+        OpenIdConnectError::UnknownResponseType(ref _response_type) => status::BadRequest,
+        OpenIdConnectError::ParamError(ref _response_type) => status::BadRequest,
         _ => status::InternalServerError
     }
 }
