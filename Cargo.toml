@@ -4,14 +4,19 @@ version = "0.1.0"
 authors = ["Chris Dawes <cmsd2@cantab.net>"]
 
 [dependencies]
-iron = "*"
-logger = "*"
-router = "*"
-urlencoded = "*"
-quick-error = "*"
+iron = "0.3.0"
+logger = "0.0.3"
+router = "0.1.1"
+urlencoded = "0.3.0"
+quick-error = "1.0.0"
+serde = "0.7.0"
+serde_json = "0.7.0"
+log = "0.3.6"
+env_logger = "0.3.3"
 
-log = "*"
-env_logger = "*"
+[dependencies.handlebars-iron]
+version = "0.15.0"
+features = ["serde_type"]
 
 [dev_dependencies]
 

@@ -1,5 +1,6 @@
 extern crate iron;
 extern crate urlencoded;
+extern crate handlebars_iron;
 #[macro_use] extern crate quick_error;
 
 pub mod result;
