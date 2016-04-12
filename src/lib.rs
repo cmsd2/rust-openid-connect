@@ -5,6 +5,7 @@ extern crate handlebars_iron;
 
 pub mod result;
 pub mod params;
+pub mod login;
 
 use std::collections::HashMap;
 use result::{Result, OpenIdConnectError};
