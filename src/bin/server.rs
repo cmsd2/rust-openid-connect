@@ -42,12 +42,13 @@ impl AfterMiddleware for ErrorRenderer {
     }
 }
 
-fn hello_handler(_: &mut Request) -> IronResult<Response> {
+fn home_handler(_: &mut Request) -> IronResult<Response> {
     let mut resp = Response::new();
 
     let mut data = HashMap::<String,String>::new();
     data.insert("msg".to_owned(), "Hello, World!".to_owned());
-    resp.set_mut(Template::new("index", data)).set_mut(status::Ok);
+    data.insert("_view".to_owned(), "index.html".to_owned());
+    resp.set_mut(Template::new("_layout.html", data)).set_mut(status::Ok);
     Ok(resp)
 }
 
@@ -90,7 +91,7 @@ pub fn main() {
     let mut router = Router::new();
 //    router.get("/.well-known/)
     router.get("/authorize", web_handler(authorize_handler));
-    router.get("/hello", web_handler(hello_handler));
+    router.get("/", web_handler(home_handler));
     router.get("/login", web_handler(login_get_handler));
     router.post("/login", web_handler(login_post_handler));
     

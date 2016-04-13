@@ -69,8 +69,9 @@ pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
     // TODO these must be escaped to avoid cross-site-scripting
     data.insert("username".to_owned(), username);
     data.insert("password".to_owned(), password);
+    data.insert("_view".to_owned(), "login.html".to_owned());
     
-    Ok(Response::with((status::Ok, Template::new("login.html", data))))
+    Ok(Response::with((status::Ok, Template::new("_layout.html", data))))
 }
 
 pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
