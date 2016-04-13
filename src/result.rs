@@ -50,13 +50,6 @@ quick_error! {
             description("url parse error")
             display("Error parsing url: {}", description)
         }
-        
-        AuthenticationError(err: authentication::AuthenticationError) {
-            from()
-            description("authentication error")
-            display("Authentication error: {}", err)
-            cause(err)
-        }
     }
 }
 
