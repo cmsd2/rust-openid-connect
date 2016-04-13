@@ -7,10 +7,9 @@ extern crate handlebars_iron;
 
 pub mod result;
 pub mod params;
-pub mod login;
-pub mod authorize;
 pub mod urls;
-pub mod home;
+pub mod routes;
+pub mod authentication;
 
 use result::{Result, OpenIdConnectError};
 

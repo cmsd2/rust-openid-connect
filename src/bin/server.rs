@@ -16,9 +16,9 @@ use logger::Logger;
 use logger::format::Format;
 use handlebars_iron::{HandlebarsEngine, DirectorySource};
 
-use openid_connect::login::*;
-use openid_connect::authorize::*;
-use openid_connect::home::*;
+use openid_connect::routes::login::*;
+use openid_connect::routes::authorize::*;
+use openid_connect::routes::home::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
