@@ -44,6 +44,11 @@ quick_error! {
             display("Param error: {}", err)
             cause(err)
         }
+        
+        UrlParseError(description: String) {
+            description("url parse error")
+            display("Error parsing url: {}", description)
+        }
     }
 }
 

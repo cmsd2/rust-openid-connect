@@ -2,10 +2,13 @@ extern crate iron;
 extern crate urlencoded;
 extern crate handlebars_iron;
 #[macro_use] extern crate quick_error;
+#[macro_use] extern crate log;
 
 pub mod result;
 pub mod params;
 pub mod login;
+pub mod authorize;
+pub mod urls;
 
 use std::collections::HashMap;
 use result::{Result, OpenIdConnectError};
@@ -25,41 +28,7 @@ impl ResponseType {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct AuthorizeRequest {
-    response_type: ResponseType,
-    scopes: Vec<String>,
-    client_id: String,
-    state: String,
-    // nonce: String, // ?
-    redirect_uri: String, // or url type?
-    prompt: Option<String>,
-}
 
-impl AuthorizeRequest {
-    pub fn from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
-        let response_type = try!(multimap_get_one(hashmap, "response_type"));
-        let scopes = try!(multimap_get(hashmap, "scope"));
-        let client_id = try!(multimap_get_one(hashmap, "client_id"));
-        let state = try!(multimap_get_one(hashmap, "state"));
-        let redirect_uri = try!(multimap_get_one(hashmap, "redirect_uri"));
-        let prompt = try!(multimap_get_maybe_one(hashmap, "prompt"));
-    
-        Ok(AuthorizeRequest {
-            response_type: try!(ResponseType::from_str(response_type)),
-            scopes: scopes.clone(),
-            client_id: client_id.to_owned(),
-            state: state.to_owned(),
-            redirect_uri: redirect_uri.to_owned(),
-            prompt: prompt.map(|s| s.to_owned()),
-        })
-    }
-    
-    pub fn has_scope(&self, scope: &str) -> bool {
-        self.scopes.iter().find(|s| *s == scope).is_some()
-    }
-}
-    
 #[cfg(test)]
 mod test {
     #[test]
