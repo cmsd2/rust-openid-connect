@@ -1,6 +1,6 @@
 <section id="login_form">
     <div class="container">
-        <form role="form" action="/login" method="post">
+        <form role="form" action="/register" method="post">
             <div class="form-group">
                 <label for="username">Username:</label>
                 <input type="text" class="form-control" id="username" name="username">
@@ -10,14 +10,15 @@
                 <label for="password">Password:</label>
                 <input type="password" class="form-control" id="password" name="password">
             </div>
+            
+            <div class="form-group">
+                <label for="password">Confirm Password:</label>
+                <input type="password" class="form-control" id="password_confirmation" name="password_confirmation">
+            </div>
         
             <input type="hidden" class="csrf_token" value="{{csrf_token}}" name="csrf_token">
         
-            
-            <button type="submit" class="btn btn-default">Login</button>
-            
-            <!-- TODO make cancel button go back to referer -->
-            <button type="cancel" class="btn pull-right">Cancel</button>
+            <button type="submit" class="btn btn-default">Register</button>
         </form>
     </div>
 </section>

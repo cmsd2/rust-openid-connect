@@ -19,6 +19,7 @@ use handlebars_iron::{HandlebarsEngine, DirectorySource};
 use openid_connect::routes::login::*;
 use openid_connect::routes::authorize::*;
 use openid_connect::routes::home::*;
+use openid_connect::routes::register::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -77,6 +78,8 @@ pub fn main() {
     router.get("/", web_handler(home_handler));
     router.get("/login", web_handler(login_get_handler));
     router.post("/login", web_handler(login_post_handler));
+    router.get("/register", web_handler(register_get_handler));
+    router.post("/register", web_handler(register_post_handler));
     
     let mut chain = Chain::new(router);
     
