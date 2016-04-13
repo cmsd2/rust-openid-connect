@@ -50,6 +50,16 @@ quick_error! {
             description("url parse error")
             display("Error parsing url: {}", description)
         }
+        
+        UserAlreadyExists {
+            description("user already exists")
+            display("User already exists")
+        }
+        
+        UserNotFound {
+            description("user not found")
+            display("User not found")
+        }
     }
 }
 
