@@ -10,6 +10,7 @@ use handlebars_iron::Template;
 use result::{Result, OpenIdConnectError};
 use params::*;
 use urls::*;
+use config::Config;
 
 pub fn get_form_value<'a>(key: &str, params: &'a HashMap<String, Vec<String>>, flash: &mut Vec<String>) -> Option<&'a str> {
     let result = multimap_get_maybe_one(params, key);
@@ -53,7 +54,7 @@ pub fn new_register_form() -> HashMap<String, String> {
     data
 }
 
-pub fn register_get_handler(req: &mut Request) -> IronResult<Response> {
+pub fn register_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     let mut username = "".to_owned();
     let mut password = "".to_owned();
     
@@ -75,7 +76,7 @@ pub fn register_get_handler(req: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, Template::new("_layout.html", data))))
 }
 
-pub fn register_post_handler(req: &mut Request) -> IronResult<Response> {
+pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     let register_url = try!(relative_url(req, "/register"));
     
     match req.get_ref::<UrlEncodedBody>() {

@@ -24,6 +24,7 @@ use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
 use openid_connect::users::*;
 use openid_connect::config::*;
+use openid_connect::handlers::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -46,14 +47,18 @@ pub fn main() {
     let format = Format::new(FORMAT, vec![], vec![]);
     let (logger_before, logger_after) = Logger::new(Some(format.unwrap()));
     
+    let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
+    
+    let config = Config::new(user_repo);
+    
     // html content type;
     // html error pages
     // urlencoded_form accept type?
     // form request forgery protection
     // TODO move the hbse out to be reused
     // TODO macro syntax to wrap several routes similarly
-    fn web_handler<T>(route: T) -> Chain
-    where T: Handler
+    fn web_handler<T>(config: &Config, route: T) -> Chain
+    where T: MethodHandler<Config>
     {
         let mut hbse = HandlebarsEngine::new();
         hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
@@ -61,7 +66,7 @@ pub fn main() {
             panic!("{:?}", r);
         }
   
-        let mut chain = Chain::new(route);
+        let mut chain = Chain::new(bind(config.clone(), route));
         chain.link_after(hbse);
         chain
     }
@@ -69,25 +74,20 @@ pub fn main() {
     // json accept and content types
     // json error page
     // jwt validation
-    fn api_handler<T>(route: T) -> Chain
-    where T: Handler
+    fn api_handler<T>(config: &Config, route: T) -> Chain
+    where T: MethodHandler<Config>
     {
-        Chain::new(route)
+        Chain::new(bind(config.clone(), route))
     }
-    
-    let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
-    
-    let config = Config::new(user_repo);
-    
     
     let mut router = Router::new();
 //    router.get("/.well-known/)
-    router.get("/authorize", web_handler(authorize_handler));
-    router.get("/", web_handler(home_handler));
-    router.get("/login", web_handler(login_get_handler));
-    router.post("/login", web_handler(login_post_handler));
-    router.get("/register", web_handler(register_get_handler));
-    router.post("/register", web_handler(register_post_handler));
+    router.get("/authorize", web_handler(&config, authorize_handler));
+    router.get("/", web_handler(&config, home_handler));
+    router.get("/login", web_handler(&config, login_get_handler));
+    router.post("/login", web_handler(&config, login_post_handler));
+    router.get("/register", web_handler(&config, register_get_handler));
+    router.post("/register", web_handler(&config, register_post_handler));
     
     let mut chain = Chain::new(router);
     

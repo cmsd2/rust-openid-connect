@@ -10,6 +10,7 @@ use handlebars_iron::Template;
 use result::{Result, OpenIdConnectError};
 use params::*;
 use urls::*;
+use config::Config;
 
 #[derive(Clone, Debug)]
 pub struct LoginRequest {
@@ -49,7 +50,7 @@ pub fn parse_login_request(req: &mut Request) -> Result<LoginRequest> {
     Err(OpenIdConnectError::NotImplemented)
 }
 
-pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
+pub fn login_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     let mut username = "".to_owned();
     let mut password = "".to_owned();
     
@@ -71,7 +72,7 @@ pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, Template::new("_layout.html", data))))
 }
 
-pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
+pub fn login_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     let login_url = try!(relative_url(req, "/login"));
     
     match req.get_ref::<UrlEncodedBody>() {

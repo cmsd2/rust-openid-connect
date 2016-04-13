@@ -9,6 +9,7 @@ use result::{Result, OpenIdConnectError};
 use params::*;
 use urls::*;
 use ::ResponseType;
+use config::Config;
 
 
 #[derive(Clone, Debug)]
@@ -61,7 +62,7 @@ pub fn parse_authorize_request(req: &mut Request) -> Result<AuthorizeRequest> {
     }
 }
 
-pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
+pub fn authorize_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/authorize");
     let authorize_request = try!(parse_authorize_request(req));
     debug!("authorize: {:?}", authorize_request);
