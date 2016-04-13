@@ -9,6 +9,8 @@ extern crate handlebars_iron;
 #[macro_use] extern crate log;
 extern crate env_logger;
 
+use std::sync::Arc;
+
 use iron::prelude::*;
 use iron::{AfterMiddleware, Handler};
 use router::Router;
@@ -20,6 +22,8 @@ use openid_connect::routes::login::*;
 use openid_connect::routes::authorize::*;
 use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
+use openid_connect::users::*;
+use openid_connect::config::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -70,6 +74,10 @@ pub fn main() {
     {
         Chain::new(route)
     }
+    
+    let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
+    
+    let config = Config::new(user_repo);
     
     
     let mut router = Router::new();

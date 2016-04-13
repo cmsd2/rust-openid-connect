@@ -10,6 +10,8 @@ pub mod params;
 pub mod urls;
 pub mod routes;
 pub mod authentication;
+pub mod users;
+pub mod config;
 
 use result::{Result, OpenIdConnectError};
 

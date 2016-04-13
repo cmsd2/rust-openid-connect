@@ -10,7 +10,7 @@ pub struct User {
     pub hashed_password: Option<String>,
 }
 
-pub trait UserRepo {
+pub trait UserRepo where Self: Send + Sync {
     fn add_user(&self, u: User) -> Result<()>;
     
     fn find_user(&self, username: &str) -> Result<Option<User>>;
