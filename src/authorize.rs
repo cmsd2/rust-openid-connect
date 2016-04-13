@@ -4,7 +4,6 @@ use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
 use urlencoded::UrlEncodedQuery;
-use handlebars_iron::Template;
 
 use result::{Result, OpenIdConnectError};
 use params::*;

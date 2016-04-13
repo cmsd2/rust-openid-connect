@@ -10,21 +10,15 @@ extern crate handlebars_iron;
 extern crate env_logger;
 
 use iron::prelude::*;
-use iron::status;
-use iron::method::Method;
 use iron::{AfterMiddleware, Handler};
 use router::Router;
 use logger::Logger;
 use logger::format::Format;
-use urlencoded::{UrlEncodedQuery, UrlEncodedBody};
-use handlebars_iron::{HandlebarsEngine, DirectorySource, Template};
-use std::collections::HashMap;
-use std::io::Read;
+use handlebars_iron::{HandlebarsEngine, DirectorySource};
 
-use openid_connect::result::*;
-use openid_connect::params::*;
 use openid_connect::login::*;
 use openid_connect::authorize::*;
+use openid_connect::home::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -40,16 +34,6 @@ impl AfterMiddleware for ErrorRenderer {
         
         Ok(err.response.set(new_body))
     }
-}
-
-fn home_handler(_: &mut Request) -> IronResult<Response> {
-    let mut resp = Response::new();
-
-    let mut data = HashMap::<String,String>::new();
-    data.insert("msg".to_owned(), "Hello, World!".to_owned());
-    data.insert("_view".to_owned(), "index.html".to_owned());
-    resp.set_mut(Template::new("_layout.html", data)).set_mut(status::Ok);
-    Ok(resp)
 }
 
 pub fn main() {
@@ -83,8 +67,7 @@ pub fn main() {
     fn api_handler<T>(route: T) -> Chain
     where T: Handler
     {
-        let mut chain = Chain::new(route);
-        chain
+        Chain::new(route)
     }
     
     

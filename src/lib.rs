@@ -1,4 +1,5 @@
 extern crate iron;
+extern crate router;
 extern crate urlencoded;
 extern crate handlebars_iron;
 #[macro_use] extern crate quick_error;
@@ -9,10 +10,9 @@ pub mod params;
 pub mod login;
 pub mod authorize;
 pub mod urls;
+pub mod home;
 
-use std::collections::HashMap;
 use result::{Result, OpenIdConnectError};
-use params::*;
 
 #[derive(Copy, Clone, Debug)]
 pub enum ResponseType {

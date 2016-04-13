@@ -1,11 +1,8 @@
 use std::io::Read;
 use std::collections::HashMap;
-use std::result;
 
 use iron::prelude::*;
 use iron::status;
-use iron::Url;
-use iron::method::Method;
 use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use handlebars_iron::Template;
@@ -79,6 +76,7 @@ pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
     
     match req.get_ref::<UrlEncodedBody>() {
         Ok(params) => {
+            debug!("logging in with creds {:?}", params);
             // TODO validate csrf
             // TODO validate credentials
             // TODO create session and set cookie
