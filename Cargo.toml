@@ -13,6 +13,8 @@ serde = "0.7.0"
 serde_json = "0.7.0"
 log = "0.3.6"
 env_logger = "0.3.3"
+staticfile = "*"
+mount = "*"
 
 [dependencies.handlebars-iron]
 version = "0.15.0"

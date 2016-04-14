@@ -5,14 +5,19 @@ extern crate router;
 extern crate logger;
 extern crate urlencoded;
 extern crate handlebars_iron;
+extern crate staticfile;
+extern crate mount;
 
 #[macro_use] extern crate log;
 extern crate env_logger;
 
 use std::sync::Arc;
+use std::path::Path;
 
 use iron::prelude::*;
 use iron::{AfterMiddleware, Handler};
+use mount::Mount;
+use staticfile::Static;
 use router::Router;
 use logger::Logger;
 use logger::format::Format;
@@ -80,6 +85,7 @@ pub fn main() {
         Chain::new(bind(config.clone(), route))
     }
     
+    
     let mut router = Router::new();
 //    router.get("/.well-known/)
     router.get("/authorize", web_handler(&config, authorize_handler));
@@ -89,7 +95,15 @@ pub fn main() {
     router.get("/register", web_handler(&config, register_get_handler));
     router.post("/register", web_handler(&config, register_post_handler));
     
-    let mut chain = Chain::new(router);
+    let mut mount = Mount::new();
+    mount.mount("/", router);
+    mount.mount("/js", Static::new(Path::new("priv/js/")));
+    mount.mount("/css", Static::new(Path::new("priv/css")));
+    mount.mount("/images", Static::new(Path::new("priv/images")));
+    mount.mount("/favicon.ico", Static::new(Path::new("priv/favicon.ico")));
+    mount.mount("/robots.txt", Static::new(Path::new("priv/robots.txt")));
+    
+    let mut chain = Chain::new(mount);
     
     chain.link_before(logger_before);
     chain.link_after(logger_after);
