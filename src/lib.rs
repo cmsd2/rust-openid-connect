@@ -13,6 +13,7 @@ pub mod authentication;
 pub mod users;
 pub mod config;
 pub mod handlers;
+pub mod view_models;
 
 use result::{Result, OpenIdConnectError};
 

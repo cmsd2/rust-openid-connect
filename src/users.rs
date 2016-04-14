@@ -10,6 +10,16 @@ pub struct User {
     pub hashed_password: Option<String>,
 }
 
+impl User {
+    pub fn new(username: String, password: Option<String>) -> User {
+        User {
+            username: username,
+            hashed_password: Some(hash_password(password.as_ref().map(|s| &s[..]).unwrap_or(""))),
+            password: password,
+        }
+    }
+}
+
 pub trait UserRepo where Self: Send + Sync {
     fn add_user(&self, u: User) -> Result<()>;
     
