@@ -6,6 +6,7 @@ use iron::status;
 use urlencoded;
 use params;
 use authentication;
+use validation;
 
 quick_error! {
     #[derive(Debug)]
@@ -59,6 +60,13 @@ quick_error! {
         UserNotFound {
             description("user not found")
             display("User not found")
+        }
+        
+        ValidationError(err: validation::ValidationError) {
+            from()
+            description("validation error")
+            display("Validation error: {}", err)
+            cause(err)
         }
     }
 }

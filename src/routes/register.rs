@@ -11,71 +11,58 @@ use result::{Result, OpenIdConnectError};
 use params::*;
 use urls::*;
 use config::Config;
-use view_models::User;
-use users;
+use users::*;
+use validation::*;
 
-pub fn get_form_value<'a>(key: &str, params: &'a HashMap<String, Vec<String>>, flash: &mut Vec<String>) -> Option<&'a str> {
-    let result = multimap_get_maybe_one(params, key);
-    
-    match result {
-        Err(err) => {
-            flash.push(format!("invalid {}: {}", key, err));
-            None
-        },
-        Ok(s) => s
-    }
+pub fn user_from_form(params: &HashMap<String, Vec<String>>) -> Result<User> {
+    let username = try!(multimap_get_maybe_one(params, "username")).map(|s| s.to_owned()).unwrap_or(String::new());
+    let password = try!(multimap_get_maybe_one(params, "password")).map(|s| s.to_owned());
+        
+    Ok(User::new(username, password))
 }
 
-pub fn user_from_form(params: &HashMap<String, Vec<String>>) -> User {
-    let mut user = User::new();
+pub fn validate_user(user: &User) -> Result<ValidatorState> {
+    let mut validator = ValidatorSchema::<User>::new();
     
-    if let Some(username) = get_form_value("username", params, flash) {
-        user.username = Some(username.to_owned());
-    }
+    validator.rule(Box::new(|u: &User, s: &mut ValidatorState| {
+        if u.username == "" {
+            s.reject("username", "username must not be empty".to_owned());
+        }
+        Ok(())
+    }));
     
-    if let Some(password) = get_form_value("password", params, flash) {
-        user.password = Some(password.to_owned());
-    }
+    validator.rule(Box::new(|u: &User, s: &mut ValidatorState| {
+        if u.password.as_ref().map(|s| &s[..]).unwrap_or("") == "" {
+            s.reject("password", "password must not be empty".to_owned());
+        }
+        Ok(())
+    }));
     
-    user
+    try!(validator.validate(user));
+    
+    debug!("user validation: {:?}", validator.state);
+    
+    Ok(validator.state)
 }
 
-pub fn validate_user(user: &User, flash: &mut Vec<String>) -> Result<ValidatedUser> {
-    let mut validating_user: User;
-    let mut bool is_valid = false;
-    
-    if let Some(username) = get_form_value("username", params, flash) {
-        user.username = Some(username.to_owned());
-    }
-    
-    if let Some(password) = get_form_value("password", params, flash) {
-        user.password = Some(password.to_owned());
-    }
-    
-    if !flash.is_empty() {
-        //TODO return errors to user
-        debug!("form validation errors: {:?}", flash);
-        Ok(user)
-    } else {
-        Ok(user)
-    }
-}
-
-pub fn load_register_form(params: &HashMap<String, Vec<String>>) -> HashMap<String, String> {
+pub fn load_register_form(params: &HashMap<String, Vec<String>>) -> Result<HashMap<String, String>> {
     let mut data = HashMap::<String, String>::new();
-    let mut flash: Vec<String> = vec![];
     
-    if let Ok(user) = user_from_form(params, &mut flash) {
-        data.insert("username".to_owned(), user.username.unwrap_or(String::new()).clone());
-        data.insert("password".to_owned(), user.password.unwrap_or(String::new()).clone());
+    match user_from_form(params) {
+        Ok(user) => {
+            let validation = try!(validate_user(&user));
+            //TODO save validation results to hashmap for rendering
+    
+            data.insert("username".to_owned(), user.username.clone());
+            data.insert("password".to_owned(), user.password.unwrap_or(String::new()).clone());
+        },
+        Err(err) => {
+            debug!("error reading user fields from form: {:?}", err);
+            //TODO render appropriate error message
+        }
     }
     
-    //TODO feed validation back to user
-    if !flash.is_empty() {
-        debug!("flash: {:?}", flash);
-    }
-    
-    data
+    Ok(data)
 }
 
 pub fn new_register_form() -> HashMap<String, String> {
@@ -95,7 +82,7 @@ pub fn register_get_handler(config: &Config, req: &mut Request) -> IronResult<Re
         Ok(params) => {
             debug!("parsed query params: {:?}", params);
             
-            load_register_form(params)
+            try!(load_register_form(params))
         },
         Err(err) => {
             debug!("error parsing query params: {:?}", err);
@@ -118,14 +105,16 @@ pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<R
             // TODO validate csrf
             // TODO validate credentials
             // TODO create session and set cookie
-            let mut errors = vec![];
             
-            if let Ok(user) = user_from_form(params, &mut errors) {
-                debug!("add user to repo: {:?}", user);
+            match user_from_form(params) {
+                Ok(user) => {
+                    debug!("add user to repo: {:?}", user);
                 
-                config.user_repo.add_user(users::User::new(user.username, user.password));
-            } else {
-                debug!("user validation errors: {:?}", errors);
+                    config.user_repo.add_user(user);
+                },
+                Err(err) => {
+                    debug!("user validation errors: {:?}", err);
+                }
             }
             
             Ok(Response::with((status::Ok, "Ok")))
