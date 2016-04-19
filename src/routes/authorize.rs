@@ -15,30 +15,41 @@ use config::Config;
 #[derive(Clone, Debug)]
 pub struct AuthorizeRequest {
     response_type: ResponseType,
-    scopes: Vec<String>,
+    scopes: Vec<String>, // required. must contain at least "openid" scope.
     client_id: String,
-    state: String,
-    // nonce: String, // ?
+    state: Option<String>, // recommended
+    nonce: Option<String>, // optional in authorization code flow. required in implicit flow
     redirect_uri: String, // or url type?
+    response_mode: Option<String>, // optional
     prompt: Option<String>,
+    display: Option<String>,
+    // other stuff: max_age, ui_locales, id_token_hint, login_hint, acr_values
 }
+
 
 impl AuthorizeRequest {
     pub fn from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
         let response_type = try!(multimap_get_one(hashmap, "response_type"));
         let scopes = try!(multimap_get(hashmap, "scope"));
         let client_id = try!(multimap_get_one(hashmap, "client_id"));
-        let state = try!(multimap_get_one(hashmap, "state"));
+        let state = try!(multimap_get_maybe_one(hashmap, "state"));
         let redirect_uri = try!(multimap_get_one(hashmap, "redirect_uri"));
         let prompt = try!(multimap_get_maybe_one(hashmap, "prompt"));
+        let display = try!(multimap_get_maybe_one(hashmap, "display"));
+        let nonce = try!(multimap_get_maybe_one(hashmap, "nonce"));
+        let response_mode = try!(multimap_get_maybe_one(hashmap, "response_mode"));
     
         Ok(AuthorizeRequest {
             response_type: try!(ResponseType::from_str(response_type)),
             scopes: scopes.clone(),
             client_id: client_id.to_owned(),
-            state: state.to_owned(),
+            state: state.map(|s| s.to_owned()),
             redirect_uri: redirect_uri.to_owned(),
             prompt: prompt.map(|s| s.to_owned()),
+            display: display.map(|s| s.to_owned()),
+            nonce: nonce.map(|s| s.to_owned()),
+            response_mode: response_mode.map(|s| s.to_owned()),
+            
         })
     }
     

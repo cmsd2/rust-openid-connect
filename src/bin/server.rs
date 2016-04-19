@@ -23,6 +23,7 @@ use logger::Logger;
 use logger::format::Format;
 use handlebars_iron::{HandlebarsEngine, DirectorySource};
 
+use openid_connect::routes::token::*;
 use openid_connect::routes::login::*;
 use openid_connect::routes::authorize::*;
 use openid_connect::routes::home::*;
@@ -94,6 +95,8 @@ pub fn main() {
     router.post("/login", web_handler(&config, login_post_handler));
     router.get("/register", web_handler(&config, register_get_handler));
     router.post("/register", web_handler(&config, register_post_handler));
+    
+    router.post("/token", api_handler(&config, token_post_handler));
     
     let mut mount = Mount::new();
     mount.mount("/", router);
