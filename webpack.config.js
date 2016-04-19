@@ -5,10 +5,9 @@ module.exports = {
   devtool: "source-map",
   entry: {
     "app": [
-      "./web/css/app.scss",
-      "bootstrap/js/bootstrap.js",
       "bootstrap/css/bootstrap.css", 
-      "./web/js/app.js"
+      "./web/js/app.js",
+      "./web/css/app.scss"
     ],
   },
 
@@ -21,6 +20,7 @@ module.exports = {
     alias: {
       sinon: __dirname + '/node_modules/sinon/pkg/sinon',
       bootstrap: __dirname + '/node_modules/bootstrap/dist',
+      jquery: __dirname + '/node_modules/jquery/dist',
       openid_connect: __dirname + "/web/js"
     }
   },
