@@ -19,7 +19,6 @@ mount = "*"
 [dependencies.handlebars-iron]
 version = "0.15.0"
 features = ["serde_type"]
-git = "https://github.com/cmsd2/handlebars-iron.git"
 
 [dev_dependencies]
 
