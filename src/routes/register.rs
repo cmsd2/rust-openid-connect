@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::collections::HashMap;
 
 use iron::prelude::*;
@@ -12,7 +11,7 @@ use vlad::state::*;
 use vlad::validation::*;
 use vlad::params::*;
 
-use result::{Result, OpenIdConnectError};
+use result::{Result};
 use urls::*;
 use config::Config;
 use users::*;
@@ -77,7 +76,7 @@ pub fn new_register_form() -> HashMap<String, String> {
     data
 }
 
-pub fn register_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn register_get_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
     let mut username = "".to_owned();
     let mut password = "".to_owned();
     
@@ -113,7 +112,7 @@ pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<R
                 Ok(user) => {
                     debug!("add user to repo: {:?}", user);
                 
-                    config.user_repo.add_user(user);
+                    try!(config.user_repo.add_user(user));
                 },
                 Err(err) => {
                     debug!("user validation errors: {:?}", err);

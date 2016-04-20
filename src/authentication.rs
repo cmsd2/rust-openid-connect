@@ -1,6 +1,4 @@
-use std::result;
-use result::{Result, OpenIdConnectError};
-use users::{User, UserRepo};
+use result::{Result};
 /// A way of authenticating users against a repository of users.
 
 pub enum AuthenticationStatus {
@@ -13,6 +11,3 @@ pub enum AuthenticationStatus {
 pub trait Authenticator {
     fn authenticate(&self, username: &str, password: &str) -> Result<AuthenticationStatus>;
 }
-
-
-

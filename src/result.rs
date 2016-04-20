@@ -5,7 +5,6 @@ use iron::prelude::*;
 use iron::status;
 use urlencoded;
 use vlad::params;
-use authentication;
 use vlad;
 
 quick_error! {

@@ -2,13 +2,10 @@ use std::collections::HashMap;
 
 use iron::prelude::*;
 use iron::status;
-use iron::modifiers::Redirect;
 use urlencoded::UrlEncodedBody;
 
 use result::{Result, OpenIdConnectError};
 use vlad::params::*;
-use urls::*;
-use ::ResponseType;
 use config::Config;
 use vlad::result;
 use vlad::result::VladError;
@@ -146,7 +143,7 @@ pub fn parse_token_request(req: &mut Request) -> Result<TokenRequest> {
     Ok(token_request)
 }
 
-pub fn token_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn token_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/token");
     
     let token_request = try!(parse_token_request(req));

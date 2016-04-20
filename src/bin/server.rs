@@ -15,7 +15,7 @@ use std::sync::Arc;
 use std::path::Path;
 
 use iron::prelude::*;
-use iron::{AfterMiddleware, Handler};
+use iron::{AfterMiddleware};
 use mount::Mount;
 use staticfile::Static;
 use router::Router;

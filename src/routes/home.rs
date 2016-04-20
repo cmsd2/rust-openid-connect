@@ -4,7 +4,7 @@ use handlebars_iron::Template;
 use std::collections::HashMap;
 use config::Config;
 
-pub fn home_handler(config: &Config, _: &mut Request) -> IronResult<Response> {
+pub fn home_handler(_config: &Config, _: &mut Request) -> IronResult<Response> {
     let mut resp = Response::new();
 
     let mut data = HashMap::<String,String>::new();
