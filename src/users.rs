@@ -1,6 +1,9 @@
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 use vlad::result::VladError;
+use vlad::params::*;
+use vlad::state::*;
 
 use result::{Result, OpenIdConnectError};
 use authentication::*;
@@ -27,15 +30,47 @@ pub struct UserBuilder {
     pub username: Option<String>,
     pub password: Option<String>,
     pub hashed_password: Option<String>,
+    
+    validation_state: ValidationState,
 }
 
 impl UserBuilder {
+    pub fn new() -> UserBuilder {
+        UserBuilder {
+            username: None,
+            password: None,
+            hashed_password: None,
+            validation_state: ValidationState::new(),
+        }
+    }
+    
     pub fn build(self) -> Result<User> {
         Ok(User {
             username: try!(self.username.ok_or(VladError::MissingRequiredValue("username".to_owned()))),
             password: self.password,
             hashed_password: self.hashed_password,
         })
+    }
+    
+    pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<bool> {
+        if let Some(username) = try!(multimap_get_maybe_one(params, "username")) {
+            self.username = Some(username.to_owned());
+        } else {
+            self.validation_state.reject("username", VladError::MissingRequiredValue("username".to_owned()));
+        }
+        
+        self.password = try!(multimap_get_maybe_one(params, "password")).map(|s| s.to_owned());
+        self.hashed_password = try!(multimap_get_maybe_one(params, "hashed_password")).map(|s| s.to_owned());
+        
+        Ok(self.validation_state.valid)
+    }
+    
+    pub fn build_from_params(params: &HashMap<String, Vec<String>>) -> Result<User> {
+        let mut builder = UserBuilder::new();
+        
+        try!(builder.load_params(params));
+        
+        builder.build()
     }
 }
 

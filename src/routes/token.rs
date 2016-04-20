@@ -13,7 +13,6 @@ use config::Config;
 use vlad::result;
 use vlad::result::VladError;
 use vlad::state::*;
-use vlad::validation::*;
 use vlad::builder::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]

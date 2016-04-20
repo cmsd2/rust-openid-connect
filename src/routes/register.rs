@@ -7,14 +7,15 @@ use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use handlebars_iron::Template;
 
-use result::{Result, OpenIdConnectError};
-use vlad::params::*;
-use urls::*;
-use config::Config;
-use users::*;
 use vlad::result;
 use vlad::state::*;
 use vlad::validation::*;
+use vlad::params::*;
+
+use result::{Result, OpenIdConnectError};
+use urls::*;
+use config::Config;
+use users::*;
 
 pub fn user_from_form(params: &HashMap<String, Vec<String>>) -> Result<User> {
     let username = try!(multimap_get_maybe_one(params, "username")).map(|s| s.to_owned()).unwrap_or(String::new());
