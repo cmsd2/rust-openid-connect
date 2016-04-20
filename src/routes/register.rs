@@ -6,65 +6,73 @@ use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use handlebars_iron::Template;
 
-use vlad::result;
+use vlad::result::{VladError};
 use vlad::state::*;
-use vlad::validation::*;
 use vlad::params::*;
 
-use result::{Result};
+use result::{Result, OpenIdConnectError};
 use urls::*;
 use config::Config;
 use users::*;
 
-pub fn user_from_form(params: &HashMap<String, Vec<String>>) -> Result<User> {
-    let username = try!(multimap_get_maybe_one(params, "username")).map(|s| s.to_owned()).unwrap_or(String::new());
-    let password = try!(multimap_get_maybe_one(params, "password")).map(|s| s.to_owned());
-        
-    Ok(User::new(username, password))
+#[derive(Clone, Debug)]
+pub struct RegisterRequest {
+    username: String,
+    password: String
 }
 
-pub fn validate_user(user: &User) -> Result<ValidationState> {
-    let mut validator = ValidationSchema::<User>::new();
+#[derive(Clone, Debug)]
+pub struct RegisterRequestBuilder {
+    username: Option<String>,
+    password: Option<String>,
     
-    validator.rule(Box::new(|u: &User, s: &mut ValidationState| {
-        if u.username == "" {
-            s.reject("username", result::VladError::InvalidValue("username must not be empty".to_owned()));
-        }
-        Ok(())
-    }));
-    
-    validator.rule(Box::new(|u: &User, s: &mut ValidationState| {
-        if u.password.as_ref().map(|s| &s[..]).unwrap_or("") == "" {
-            s.reject("password", result::VladError::InvalidValue("password must not be empty".to_owned()));
-        }
-        Ok(())
-    }));
-    
-    try!(validator.validate(user));
-    
-    debug!("user validation: {:?}", validator.state);
-    
-    Ok(validator.state)
+    validation_state: ValidationState,
 }
 
-pub fn load_register_form(params: &HashMap<String, Vec<String>>) -> Result<HashMap<String, String>> {
-    let mut data = HashMap::<String, String>::new();
-    
-    match user_from_form(params) {
-        Ok(user) => {
-            let validation = try!(validate_user(&user));
-            //TODO save validation results to hashmap for rendering
-    
-            data.insert("username".to_owned(), user.username.clone());
-            data.insert("password".to_owned(), user.password.unwrap_or(String::new()).clone());
-        },
-        Err(err) => {
-            debug!("error reading user fields from form: {:?}", err);
-            //TODO render appropriate error message
+impl RegisterRequestBuilder {
+    pub fn new() -> RegisterRequestBuilder {
+        RegisterRequestBuilder {
+            username: None,
+            password: None,
+            
+            validation_state: ValidationState::new(),
         }
     }
     
-    Ok(data)
+    pub fn build(self) -> Result<RegisterRequest> {
+        if self.validation_state.valid {
+            Ok(RegisterRequest {
+                username: self.username.unwrap(),
+                password: self.password.unwrap(),
+            })
+        } else {
+            Err(OpenIdConnectError::from(VladError::ValidationError(self.validation_state)))
+        }
+    }
+    
+    pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<bool> {
+        if let Some(username) = try!(multimap_get_maybe_one(params, "username")) {
+            self.username = Some(username.to_owned());
+        } else {
+            self.validation_state.reject("username", VladError::MissingRequiredValue("username".to_owned()));
+        }
+        
+        if let Some(password) = try!(multimap_get_maybe_one(params, "password")) {
+            self.password = Some(password.to_owned());
+        } else {
+            self.validation_state.reject("password", VladError::MissingRequiredValue("password".to_owned()));
+        }
+        
+        Ok(self.validation_state.valid)
+    }
+    
+    pub fn build_from_params(params: &HashMap<String, Vec<String>>) -> Result<RegisterRequest> {
+        let mut builder = RegisterRequestBuilder::new();
+        
+        try!(builder.load_params(params));
+        
+        builder.build()
+    }
 }
 
 pub fn new_register_form() -> HashMap<String, String> {
@@ -77,19 +85,25 @@ pub fn new_register_form() -> HashMap<String, String> {
 }
 
 pub fn register_get_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
-    let mut username = "".to_owned();
-    let mut password = "".to_owned();
+    let mut data = new_register_form();
     
-    let mut data = match req.get_ref::<UrlEncodedQuery>() {
+    match req.get_ref::<UrlEncodedQuery>() {
         Ok(params) => {
             debug!("parsed query params: {:?}", params);
             
-            try!(load_register_form(params))
+            match RegisterRequestBuilder::build_from_params(params) {
+                Ok(register_request) => {
+                    //TODO escape values to protect against cross-site-scripting
+                    data.insert("username".to_owned(), register_request.username);
+                    data.insert("password".to_owned(), register_request.password);
+                },
+                Err(err) => {
+                    debug!("invalid registration details: {:?}", err);
+                }
+            }
         },
         Err(err) => {
             debug!("error parsing query params: {:?}", err);
-            
-            new_register_form()
         }
     };
     
@@ -108,8 +122,10 @@ pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<R
             // TODO validate credentials
             // TODO create session and set cookie
             
-            match user_from_form(params) {
-                Ok(user) => {
+            match RegisterRequestBuilder::build_from_params(params) {
+                Ok(register_request) => {
+                    let user = User::new(register_request.username, Some(register_request.password));
+                    
                     debug!("add user to repo: {:?}", user);
                 
                     try!(config.user_repo.add_user(user));
