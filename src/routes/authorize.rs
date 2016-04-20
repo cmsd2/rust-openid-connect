@@ -6,7 +6,7 @@ use iron::modifiers::Redirect;
 use urlencoded::UrlEncodedQuery;
 
 use result::{Result, OpenIdConnectError};
-use params::*;
+use vlad::params::*;
 use urls::*;
 use ::ResponseType;
 use config::Config;

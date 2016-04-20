@@ -8,7 +8,7 @@ use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use handlebars_iron::Template;
 
 use result::{Result, OpenIdConnectError};
-use params::*;
+use vlad::params::*;
 use urls::*;
 use config::Config;
 

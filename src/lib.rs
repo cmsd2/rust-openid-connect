@@ -4,16 +4,15 @@ extern crate urlencoded;
 extern crate handlebars_iron;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate log;
+extern crate vlad;
 
 pub mod result;
-pub mod params;
 pub mod urls;
 pub mod routes;
 pub mod authentication;
 pub mod users;
 pub mod config;
 pub mod handlers;
-pub mod validation;
 
 use result::{Result, OpenIdConnectError};
 

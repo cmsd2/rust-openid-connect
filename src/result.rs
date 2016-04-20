@@ -4,9 +4,9 @@ use std::io;
 use iron::prelude::*;
 use iron::status;
 use urlencoded;
-use params;
+use vlad::params;
 use authentication;
-use validation;
+use vlad;
 
 quick_error! {
     #[derive(Debug)]
@@ -67,7 +67,7 @@ quick_error! {
             display("User not found")
         }
         
-        ValidationError(err: validation::ValidationError) {
+        ValidationError(err: vlad::result::VladError) {
             from()
             description("validation error")
             display("Validation error: {}", err)

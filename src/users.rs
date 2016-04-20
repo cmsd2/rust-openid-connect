@@ -1,5 +1,7 @@
 use std::sync::{Arc, Mutex};
 
+use vlad::result::VladError;
+
 use result::{Result, OpenIdConnectError};
 use authentication::*;
 
@@ -17,6 +19,23 @@ impl User {
             hashed_password: Some(hash_password(password.as_ref().map(|s| &s[..]).unwrap_or(""))),
             password: password,
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct UserBuilder {
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub hashed_password: Option<String>,
+}
+
+impl UserBuilder {
+    pub fn build(self) -> Result<User> {
+        Ok(User {
+            username: try!(self.username.ok_or(VladError::MissingRequiredValue("username".to_owned()))),
+            password: self.password,
+            hashed_password: self.hashed_password,
+        })
     }
 }
 

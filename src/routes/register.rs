@@ -8,11 +8,13 @@ use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use handlebars_iron::Template;
 
 use result::{Result, OpenIdConnectError};
-use params::*;
+use vlad::params::*;
 use urls::*;
 use config::Config;
 use users::*;
-use validation::*;
+use vlad::result;
+use vlad::state::*;
+use vlad::validation::*;
 
 pub fn user_from_form(params: &HashMap<String, Vec<String>>) -> Result<User> {
     let username = try!(multimap_get_maybe_one(params, "username")).map(|s| s.to_owned()).unwrap_or(String::new());
@@ -21,19 +23,19 @@ pub fn user_from_form(params: &HashMap<String, Vec<String>>) -> Result<User> {
     Ok(User::new(username, password))
 }
 
-pub fn validate_user(user: &User) -> Result<ValidatorState> {
-    let mut validator = ValidatorSchema::<User>::new();
+pub fn validate_user(user: &User) -> Result<ValidationState> {
+    let mut validator = ValidationSchema::<User>::new();
     
-    validator.rule(Box::new(|u: &User, s: &mut ValidatorState| {
+    validator.rule(Box::new(|u: &User, s: &mut ValidationState| {
         if u.username == "" {
-            s.reject("username", "username must not be empty".to_owned());
+            s.reject("username", result::VladError::InvalidValue("username must not be empty".to_owned()));
         }
         Ok(())
     }));
     
-    validator.rule(Box::new(|u: &User, s: &mut ValidatorState| {
+    validator.rule(Box::new(|u: &User, s: &mut ValidationState| {
         if u.password.as_ref().map(|s| &s[..]).unwrap_or("") == "" {
-            s.reject("password", "password must not be empty".to_owned());
+            s.reject("password", result::VladError::InvalidValue("password must not be empty".to_owned()));
         }
         Ok(())
     }));
