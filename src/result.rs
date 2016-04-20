@@ -23,6 +23,11 @@ quick_error! {
             display("Unknown response_type: {}", response_type.as_ref())
         }
         
+        UnknownGrantType(grant_type: Box<String>) {
+            description("unknown grant_type")
+            display("Unknown grant_type: {}", grant_type.as_ref())
+        }
+        
         ScopeNotFound(scope: Box<String>) {
             description("scope not found")
             display("Scope not found: {}", scope)
