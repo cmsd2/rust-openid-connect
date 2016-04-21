@@ -12,14 +12,18 @@ pub struct ClientApplications {
     items: Vec<ClientApplication>
 }
 
+impl ClientApplications {
+    pub fn new(apps: Vec<ClientApplication>) -> ClientApplications {
+        ClientApplications {
+            items: apps,
+        }
+    }
+}
+
 pub fn applications_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
-    let apps = try!(config.application_repo.get_client_applications());
+    let apps_list = ClientApplications::new(try!(config.application_repo.get_client_applications()));
     
-    let apps_list = ClientApplications {
-        items: apps
-    };
-    
-    let apps_json = try!(json::encode(&apps_list).map_err(|e| OpenIdConnectError::from(e)));
+    let apps_json = try!(json::encode(&apps_list).map_err(OpenIdConnectError::from));
     
     Ok(Response::with((status::Ok, apps_json)))
 }
