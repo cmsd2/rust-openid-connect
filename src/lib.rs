@@ -12,6 +12,8 @@ extern crate handlebars_iron;
 extern crate vlad;
 extern crate serde;
 extern crate serde_json;
+extern crate rustc_serialize;
+extern crate rand;
 
 pub mod result;
 pub mod urls;

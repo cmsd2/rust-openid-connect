@@ -82,9 +82,9 @@ impl ClientApplicationBuilder {
 }
 
 pub trait ClientApplicationRepo where Self: Send + Sync {
-    fn get_client_applications(&self) -> Result<Vec<ClientApplication>>;
+    fn create_client_application(&self) -> Result<ClientApplication>;
     
-    fn add_client_application(&self, u: ClientApplication) -> Result<()>;
+    fn get_client_applications(&self) -> Result<Vec<ClientApplication>>;
     
     fn find_client_application(&self, client_id: &str) -> Result<Option<ClientApplication>>;
     
@@ -124,15 +124,17 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
         Ok(client_applications.clone())
     }
     
-    fn add_client_application(&self, ca: ClientApplication) -> Result<()> {
+    fn create_client_application(&self) -> Result<ClientApplication> {
         let mut client_applications = self.client_applications.lock().unwrap();
+        
+        let ca = ClientApplication::new(new_client_id(), Some(new_secret()));
         
         if Self::find_index(&client_applications, &ca.client_id).is_some() {
             Err(OpenIdConnectError::ClientApplicationAlreadyExists)
         } else {
-            client_applications.push(ca);
+            client_applications.push(ca.clone());
             
-            Ok(())
+            Ok(ca)
         }
     }
     

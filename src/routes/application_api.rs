@@ -37,11 +37,12 @@ pub fn read_client_application_body(req: &mut Request) -> Result<ClientApplicati
     serde_json::from_str(&json).map_err(OpenIdConnectError::from)
 }
 
-pub fn applications_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
-    let item = try!(read_client_application_body(req));
-    debug!("received client application: {:?}", item);
+pub fn applications_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+    let ca = try!(config.application_repo.create_client_application());
     
-    Err(IronError::from(OpenIdConnectError::NotImplemented))
+    let ca_json: String = try!(serde_json::to_string(&ca).map_err(OpenIdConnectError::from));
+    
+    Ok(Response::with((status::Ok, ca_json)))
 }
 
 pub fn applications_put_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {

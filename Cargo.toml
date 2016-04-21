@@ -19,6 +19,7 @@ staticfile = "0.2.0"
 mount = "0.1.0"
 vlad = { path = "../vlad" }
 rustc-serialize = "0.3"
+rand = "0.3.14"
 
 [dependencies.handlebars-iron]
 version = "0.15.0"
