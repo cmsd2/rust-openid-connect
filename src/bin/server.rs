@@ -98,8 +98,15 @@ pub fn main() {
     
     router.post("/token", api_handler(&config, token_post_handler));
     
+    let mut api_router = Router::new();
+    //api_router.get("/applications", api_handler(&config, applications_get_handler));
+    //api_router.post("/applications", api_handler(&config, applications_post_handler));
+    //api_router.put("/applications/:id", api_handler(&config, applications_put_handler));
+    //api_router.delete("/applications/:id", api_handler(&config, applications_delete_handler));
+    
     let mut mount = Mount::new();
     mount.mount("/", router);
+    mount.mount("/api", api_router);
     mount.mount("/js", Static::new(Path::new("priv/js/")));
     mount.mount("/css", Static::new(Path::new("priv/css")));
     mount.mount("/images", Static::new(Path::new("priv/images")));
