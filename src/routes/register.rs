@@ -114,13 +114,15 @@ pub fn register_get_handler(_config: &Config, req: &mut Request) -> IronResult<R
 
 pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     let register_url = try!(relative_url(req, "/register"));
+    let home_url =try!(relative_url(req, "/"));
     
     match req.get_ref::<UrlEncodedBody>() {
         Ok(params) => {
             debug!("registering new user with creds {:?}", params);
             // TODO validate csrf
-            // TODO validate credentials
             // TODO create session and set cookie
+            // TODO multistep registration flow
+            // TODO redirect to flow caller
             
             match RegisterRequestBuilder::build_from_params(params) {
                 Ok(register_request) => {
@@ -135,7 +137,7 @@ pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<R
                 }
             }
             
-            Ok(Response::with((status::Ok, "Ok")))
+            Ok(Response::with((status::Found, Redirect(home_url))))
         },
         Err(err) => {
             debug!("error parsing body: {:?}", err);

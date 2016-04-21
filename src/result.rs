@@ -66,6 +66,16 @@ quick_error! {
             display("User not found")
         }
         
+        ClientApplicationAlreadyExists {
+            description("application already exists")
+            display("Application already exists")
+        }
+        
+        ClientApplicationNotFound {
+            description("application not found")
+            display("Application not found")
+        }
+        
         ValidationError(err: vlad::result::VladError) {
             from()
             description("validation error")

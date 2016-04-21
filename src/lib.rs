@@ -11,6 +11,7 @@ pub mod urls;
 pub mod routes;
 pub mod authentication;
 pub mod users;
+pub mod client_application;
 pub mod config;
 pub mod handlers;
 

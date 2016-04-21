@@ -169,7 +169,7 @@ impl Authenticator for InMemoryUserRepo {
                 }
             },
             None => {
-                Ok(AuthenticationStatus::UserNotFound)
+                Ok(AuthenticationStatus::PrincipalNotFound)
             }
         }
     }
