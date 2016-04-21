@@ -2,6 +2,9 @@
 #![feature(custom_derive, plugin)]
 #![plugin(serde_macros)]
 
+// for large numbers of errors definitions with quick-error
+#![recursion_limit="100"]
+
 extern crate iron;
 extern crate router;
 extern crate bodyparser;
