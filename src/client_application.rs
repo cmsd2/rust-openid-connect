@@ -8,7 +8,7 @@ use vlad::state::*;
 use result::{Result, OpenIdConnectError};
 use authentication::*;
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug, RustcDecodable, RustcEncodable)]
 pub struct ClientApplication {
     pub client_id: String,
     pub secret: Option<String>,
@@ -80,6 +80,8 @@ impl ClientApplicationBuilder {
 }
 
 pub trait ClientApplicationRepo where Self: Send + Sync {
+    fn get_client_applications(&self) -> Result<Vec<ClientApplication>>;
+    
     fn add_client_application(&self, u: ClientApplication) -> Result<()>;
     
     fn find_client_application(&self, client_id: &str) -> Result<Option<ClientApplication>>;
@@ -114,6 +116,11 @@ impl InMemoryClientApplicationRepo {
 }
 
 impl ClientApplicationRepo for InMemoryClientApplicationRepo {
+    fn get_client_applications(&self) -> Result<Vec<ClientApplication>> {
+        let client_applications = self.client_applications.lock().unwrap();
+        
+        Ok(client_applications.clone())
+    }
     
     fn add_client_application(&self, ca: ClientApplication) -> Result<()> {
         let mut client_applications = self.client_applications.lock().unwrap();

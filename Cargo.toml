@@ -16,6 +16,7 @@ env_logger = "0.3.3"
 staticfile = "*"
 mount = "*"
 vlad = { path = "../vlad" }
+rustc-serialize = "0.3"
 
 [dependencies.handlebars-iron]
 version = "0.15.0"

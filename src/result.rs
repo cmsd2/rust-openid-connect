@@ -4,6 +4,7 @@ use std::io;
 use iron::prelude::*;
 use iron::status;
 use urlencoded;
+use rustc_serialize::json::{DecoderError, EncoderError};
 use vlad::params;
 use vlad;
 
@@ -80,6 +81,20 @@ quick_error! {
             from()
             description("validation error")
             display("Validation error: {}", err)
+            cause(err)
+        }
+        
+        JsonEncoderError(err: EncoderError) {
+            from()
+            description("error encoding json")
+            display("Error encoding json: {}", err)
+            cause(err)
+        }
+        
+        JsonDecoderError(err: DecoderError) {
+            from()
+            description("error decoding json")
+            display("Error decoding json: {}", err)
             cause(err)
         }
     }
