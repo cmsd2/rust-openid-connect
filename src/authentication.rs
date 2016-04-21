@@ -11,3 +11,8 @@ pub enum AuthenticationStatus {
 pub trait Authenticator {
     fn authenticate(&self, username: &str, password: &str) -> Result<AuthenticationStatus>;
 }
+
+// TODO proper password hashing
+pub fn hash_password(password: &str) -> String {
+    password.to_owned()
+}

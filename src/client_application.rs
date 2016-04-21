@@ -154,11 +154,6 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
     }
 }
 
-// TODO proper password hashing
-pub fn hash_password(password: &str) -> String {
-    password.to_owned()
-}
-
 impl Authenticator for InMemoryClientApplicationRepo {
     fn authenticate(&self, client_id: &str, secret: &str) -> Result<AuthenticationStatus> {
         let client_applications = self.client_applications.lock().unwrap();

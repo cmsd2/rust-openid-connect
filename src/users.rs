@@ -149,11 +149,6 @@ impl UserRepo for InMemoryUserRepo {
     }
 }
 
-// TODO proper password hashing
-pub fn hash_password(password: &str) -> String {
-    password.to_owned()
-}
-
 impl Authenticator for InMemoryUserRepo {
     fn authenticate(&self, username: &str, password: &str) -> Result<AuthenticationStatus> {
         let users = self.users.lock().unwrap();

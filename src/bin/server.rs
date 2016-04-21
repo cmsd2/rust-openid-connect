@@ -28,9 +28,11 @@ use openid_connect::routes::login::*;
 use openid_connect::routes::authorize::*;
 use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
+use openid_connect::routes::application_api::*;
 use openid_connect::users::*;
 use openid_connect::config::*;
 use openid_connect::handlers::*;
+use openid_connect::client_application::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -54,8 +56,9 @@ pub fn main() {
     let (logger_before, logger_after) = Logger::new(Some(format.unwrap()));
     
     let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
+    let application_repo = Arc::new(Box::new(InMemoryClientApplicationRepo::new()) as Box<ClientApplicationRepo>);
     
-    let config = Config::new(user_repo);
+    let config = Config::new(user_repo, application_repo);
     
     // html content type;
     // html error pages
@@ -99,10 +102,10 @@ pub fn main() {
     router.post("/token", api_handler(&config, token_post_handler));
     
     let mut api_router = Router::new();
-    //api_router.get("/applications", api_handler(&config, applications_get_handler));
-    //api_router.post("/applications", api_handler(&config, applications_post_handler));
-    //api_router.put("/applications/:id", api_handler(&config, applications_put_handler));
-    //api_router.delete("/applications/:id", api_handler(&config, applications_delete_handler));
+    api_router.get("/applications", api_handler(&config, applications_get_handler));
+    api_router.post("/applications", api_handler(&config, applications_post_handler));
+    api_router.put("/applications/:id", api_handler(&config, applications_put_handler));
+    api_router.delete("/applications/:id", api_handler(&config, applications_delete_handler));
     
     let mut mount = Mount::new();
     mount.mount("/", router);
