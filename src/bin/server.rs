@@ -1,5 +1,9 @@
-extern crate openid_connect;
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
 
+extern crate openid_connect;
+extern crate serde;
+extern crate serde_json;
 extern crate iron;
 extern crate router;
 extern crate logger;

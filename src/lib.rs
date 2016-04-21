@@ -1,11 +1,17 @@
-extern crate rustc_serialize;
+// for serde
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
+
 extern crate iron;
 extern crate router;
+extern crate bodyparser;
 extern crate urlencoded;
 extern crate handlebars_iron;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate log;
 extern crate vlad;
+extern crate serde;
+extern crate serde_json;
 
 pub mod result;
 pub mod urls;

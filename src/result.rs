@@ -4,7 +4,8 @@ use std::io;
 use iron::prelude::*;
 use iron::status;
 use urlencoded;
-use rustc_serialize::json::{DecoderError, EncoderError};
+use bodyparser;
+use serde_json;
 use vlad::params;
 use vlad;
 
@@ -84,7 +85,7 @@ quick_error! {
             cause(err)
         }
         
-        JsonEncoderError(err: EncoderError) {
+       /* JsonEncoderError(err: EncoderError) {
             from()
             description("error encoding json")
             display("Error encoding json: {}", err)
@@ -96,6 +97,25 @@ quick_error! {
             description("error decoding json")
             display("Error decoding json: {}", err)
             cause(err)
+        }*/
+        
+        EmptyPostBody {
+            description("empty post body")
+            display("Empty post body")
+        }
+        
+        JsonError(err: serde_json::Error) {
+            from()
+            description("json error")
+            display("Json error: {}", err)
+            cause(err)
+        }
+        
+        PostBodyParseError(err: bodyparser::BodyError) {
+            from()
+            description("error parsing post body")
+            display("Error parsing post body: {}", err)
+            cause(err)
         }
     }
 }
@@ -106,6 +126,9 @@ pub fn error_status_code(oic_err: &OpenIdConnectError) -> status::Status {
         OpenIdConnectError::UnknownResponseType(ref _response_type) => status::BadRequest,
         OpenIdConnectError::ParamError(ref _response_type) => status::BadRequest,
         OpenIdConnectError::ScopeNotFound(ref _scope) => status::BadRequest,
+        OpenIdConnectError::JsonError(ref _err) => status::BadRequest,
+        OpenIdConnectError::EmptyPostBody => status::BadRequest,
+        OpenIdConnectError::ValidationError(ref _err) => status::BadRequest,
         _ => status::InternalServerError
     }
 }

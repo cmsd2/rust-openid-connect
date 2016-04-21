@@ -1,6 +1,8 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
+
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use vlad::result::VladError;
 use vlad::params::*;
 use vlad::state::*;
@@ -8,7 +10,7 @@ use vlad::state::*;
 use result::{Result, OpenIdConnectError};
 use authentication::*;
 
-#[derive(Clone,Debug, RustcDecodable, RustcEncodable)]
+#[derive(Clone,Debug, Serialize, Deserialize)]
 pub struct ClientApplication {
     pub client_id: String,
     pub secret: Option<String>,
@@ -32,7 +34,7 @@ pub struct ClientApplicationBuilder {
     client_id: Option<String>,
     secret: Option<String>,
     hashed_secret: Option<String>,
-    redirect_uris: Vec<String>,
+    redirect_uris: Option<Vec<String>>,
     
     validation_state: ValidationState,
 }
@@ -43,7 +45,7 @@ impl ClientApplicationBuilder {
             client_id: None,
             secret: None,
             hashed_secret: None,
-            redirect_uris: vec![],
+            redirect_uris: None,
             validation_state: ValidationState::new(),
         }
     }
@@ -53,7 +55,7 @@ impl ClientApplicationBuilder {
             client_id: try!(self.client_id.ok_or(VladError::MissingRequiredValue("client_id".to_owned()))),
             secret: self.secret,
             hashed_secret: self.hashed_secret,
-            redirect_uris: self.redirect_uris,
+            redirect_uris: self.redirect_uris.unwrap_or(vec![]),
         })
     }
     
