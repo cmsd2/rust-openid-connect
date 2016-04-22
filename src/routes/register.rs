@@ -113,8 +113,8 @@ pub fn register_get_handler(_config: &Config, req: &mut Request) -> IronResult<R
 }
 
 pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
-    let register_url = try!(relative_url(req, "/register"));
-    let home_url =try!(relative_url(req, "/"));
+    let register_url = try!(relative_url(req, "/register", None));
+    let home_url =try!(relative_url(req, "/", None));
     
     match req.get_ref::<UrlEncodedBody>() {
         Ok(params) => {

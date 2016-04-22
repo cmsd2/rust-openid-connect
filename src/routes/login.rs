@@ -130,7 +130,7 @@ pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Resp
 }
 
 pub fn login_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
-    let login_url = try!(relative_url(req, "/login"));
+    let login_url = try!(relative_url(req, "/login", None));
     
     match req.get_ref::<UrlEncodedBody>() {
         Ok(params) => {

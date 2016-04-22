@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use iron;
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
@@ -80,6 +81,18 @@ pub fn parse_authorize_request(config: &Config, req: &mut Request) -> Result<Aut
     Ok(auth_req)
 }
 
+pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
+    let mut params = HashMap::new();
+    
+    if authorize_request.state.is_some() {
+      params.insert("state".to_owned(), authorize_request.state.as_ref().unwrap().to_owned());
+    }
+    
+    params.insert("redirect_uri".to_owned(), authorize_request.redirect_uri.clone());
+    
+    relative_url(req, path, Some(params))
+}
+
 pub fn authorize_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/authorize");
     let authorize_request = try!(parse_authorize_request(config, req));
@@ -87,7 +100,7 @@ pub fn authorize_handler(config: &Config, req: &mut Request) -> IronResult<Respo
     
     // TODO validate subject claim
     // TODO create session and set cookie
-    let url = try!(relative_url(req, "/login"));
+    let url = try!(login_url(req, "/login", &authorize_request));
     
     Ok(Response::with((status::Found, Redirect(url))))
 }

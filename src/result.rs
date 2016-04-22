@@ -8,6 +8,7 @@ use bodyparser;
 use serde_json;
 use vlad::params;
 use vlad;
+use url;
 
 quick_error! {
     #[derive(Debug)]
@@ -53,9 +54,16 @@ quick_error! {
             cause(err)
         }
         
-        UrlParseError(description: String) {
+        UrlError(description: String) {
             description("url parse error")
             display("Error parsing url: {}", description)
+        }
+        
+        UrlParseError(err: url::ParseError) {
+            from()
+            description("url parse error")
+            display("Error parsing url: {}", err)
+            cause(err)
         }
         
         UserAlreadyExists {
