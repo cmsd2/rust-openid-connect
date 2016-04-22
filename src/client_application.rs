@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::{Serializer, Deserializer};
 use vlad::result::VladError;
 use vlad::params::*;
 use vlad::state::*;

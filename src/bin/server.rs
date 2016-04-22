@@ -33,10 +33,13 @@ use openid_connect::routes::authorize::*;
 use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
 use openid_connect::routes::application_api::*;
+use openid_connect::routes::session::*;
 use openid_connect::users::*;
 use openid_connect::config::*;
 use openid_connect::handlers::*;
 use openid_connect::client_application::*;
+use openid_connect::sessions;
+use openid_connect::login;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -60,9 +63,17 @@ pub fn main() {
     let (logger_before, logger_after) = Logger::new(Some(format.unwrap()));
     
     let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
+    user_repo.add_user(User::new("1".to_owned(), "admin".to_owned(), Some("admin".to_owned()))).unwrap();
+    
     let application_repo = Arc::new(Box::new(InMemoryClientApplicationRepo::new()) as Box<ClientApplicationRepo>);
     
-    let config = Config::new(user_repo, application_repo);
+    let cookie_signing_key = b"My secret key"[..].to_owned();
+    
+    let sessions = Arc::new(Box::new(sessions::InMemorySessions::new(user_repo.clone())) as Box<sessions::Sessions>);
+    let login_manager = login::LoginManager::new(cookie_signing_key);
+    let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
+    
+    let config = Config::new(user_repo, application_repo, sessions_controller);
     
     // html content type;
     // html error pages
@@ -106,6 +117,10 @@ pub fn main() {
     router.post("/token", api_handler(&config, token_post_handler));
     
     let mut api_router = Router::new();
+    api_router.get("/session", api_handler(&config, session_get_handler));
+    api_router.post("/session", api_handler(&config, session_post_handler));
+    api_router.delete("/session", api_handler(&config, session_delete_handler));
+    
     api_router.get("/applications", api_handler(&config, applications_get_handler));
     api_router.post("/applications", api_handler(&config, applications_post_handler));
     api_router.put("/applications/:id", api_handler(&config, applications_put_handler));
@@ -121,10 +136,10 @@ pub fn main() {
     mount.mount("/robots.txt", Static::new(Path::new("priv/robots.txt")));
     
     let mut chain = Chain::new(mount);
-    
+    chain.around(login_manager);
     chain.link_before(logger_before);
     chain.link_after(logger_after);
     chain.link_after(ErrorRenderer);
     
-    Iron::new(chain).http("localhost:3000").unwrap();
+    Iron::new(chain).http("0.0.0.0:8080").unwrap();
 }

@@ -9,6 +9,7 @@ use serde_json;
 use vlad::params;
 use vlad;
 use url;
+use persistent;
 
 quick_error! {
     #[derive(Debug)]
@@ -129,6 +130,18 @@ quick_error! {
             description("error parsing post body")
             display("Error parsing post body: {}", err)
             cause(err)
+        }
+        
+        PersistentError(err: persistent::PersistentError) {
+            from()
+            description("persistence error")
+            display("Persistence error: {}", err)
+            cause(err)
+        }
+        
+        InvalidUsernameOrPassword {
+            description("invalid username or password")
+            display("Invalid username or password")
         }
     }
 }

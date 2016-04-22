@@ -5,9 +5,11 @@ use url;
 
 use result::{Result, OpenIdConnectError};
 
-pub fn relative_url(_req: &mut Request, s: &str, maybe_params: Option<HashMap<String, String>>) -> Result<iron::Url> {
+pub fn relative_url(req: &mut Request, s: &str, maybe_params: Option<HashMap<String, String>>) -> Result<iron::Url> {
     //TODO use headers to figure out actual hostname
-     
+    //let forwarded_for = req.headers.get()
+    debug!("headers: {:?}", req.headers);
+    
     let absolute = format!("http://localhost:3000{}", s);
         
     let mut uri = try!(url::Url::parse(&absolute).map_err(OpenIdConnectError::from));

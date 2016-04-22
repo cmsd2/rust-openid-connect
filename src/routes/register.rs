@@ -14,6 +14,7 @@ use result::{Result, OpenIdConnectError};
 use urls::*;
 use config::Config;
 use users::*;
+use authentication::*;
 
 #[derive(Clone, Debug)]
 pub struct RegisterRequest {
@@ -126,7 +127,7 @@ pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<R
             
             match RegisterRequestBuilder::build_from_params(params) {
                 Ok(register_request) => {
-                    let user = User::new(register_request.username, Some(register_request.password));
+                    let user = User::new(new_user_id(), register_request.username, Some(register_request.password));
                     
                     debug!("add user to repo: {:?}", user);
                 

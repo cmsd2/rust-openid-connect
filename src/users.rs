@@ -10,14 +10,16 @@ use authentication::*;
 
 #[derive(Clone,Debug)]
 pub struct User {
+    pub id: String,
     pub username: String,
     pub password: Option<String>,
     pub hashed_password: Option<String>,
 }
 
 impl User {
-    pub fn new(username: String, password: Option<String>) -> User {
+    pub fn new(id: String, username: String, password: Option<String>) -> User {
         User {
+            id: id,
             username: username,
             hashed_password: Some(hash_password(password.as_ref().map(|s| &s[..]).unwrap_or(""))),
             password: password,
@@ -46,6 +48,7 @@ impl UserBuilder {
     
     pub fn build(self) -> Result<User> {
         Ok(User {
+            id: new_user_id(),
             username: try!(self.username.ok_or(VladError::MissingRequiredValue("username".to_owned()))),
             password: self.password,
             hashed_password: self.hashed_password,

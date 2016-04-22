@@ -65,7 +65,7 @@ pub fn read_client_application_body(req: &mut Request) -> Result<ClientApplicati
     serde_json::from_str(&json).map_err(OpenIdConnectError::from)
 }
 
-pub fn applications_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_post_handler(config: &Config, _req: &mut Request) -> IronResult<Response> {
     let ca = try!(config.application_repo.create_client_application());
     
     let ca_json: String = try!(serde_json::to_string(&ca).map_err(OpenIdConnectError::from));

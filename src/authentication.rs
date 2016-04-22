@@ -21,6 +21,12 @@ pub fn hash_password(password: &str) -> String {
     password.to_owned()
 }
 
+pub fn new_user_id() -> String {
+    let mut bytes = [0u8, 12];
+    thread_rng().fill_bytes(&mut bytes);
+    bytes.to_base64(base64::URL_SAFE)
+}
+
 pub fn new_client_id() -> String {
     let mut bytes = [0u8; 12];
     thread_rng().fill_bytes(&mut bytes);

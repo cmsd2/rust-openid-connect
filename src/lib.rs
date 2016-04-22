@@ -18,6 +18,9 @@ extern crate serde_json;
 extern crate rustc_serialize;
 extern crate rand;
 extern crate url;
+extern crate oven;
+extern crate cookie;
+extern crate persistent;
 
 pub mod result;
 pub mod urls;
@@ -27,6 +30,8 @@ pub mod users;
 pub mod client_application;
 pub mod config;
 pub mod handlers;
+pub mod login;
+pub mod sessions;
 
 use result::{Result, OpenIdConnectError};
 
