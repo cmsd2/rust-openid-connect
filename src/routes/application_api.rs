@@ -49,7 +49,7 @@ impl ClientApplicationView {
     }
 }
 
-pub fn applications_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_get_handler(config: &Config, _req: &mut Request) -> IronResult<Response> {
     let apps_list = ClientApplicationList::new(try!(config.application_repo.get_client_applications()));
     
     let apps_json = try!(serde_json::to_string(&apps_list).map_err(OpenIdConnectError::from));
@@ -99,6 +99,10 @@ pub fn applications_put_handler(config: &Config, req: &mut Request) -> IronResul
     Ok(Response::with((status::Ok, update_json)))
 }
 
-pub fn applications_delete_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
-    Err(IronError::from(OpenIdConnectError::NotImplemented))
+pub fn applications_delete_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+    let ref client_id = try!(get_url_param(req, "id"));
+    
+    try!(config.application_repo.remove_client_application(client_id));
+    
+    Ok(Response::with((status::Ok, "")))
 }
