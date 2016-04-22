@@ -27,6 +27,10 @@ impl ClientApplication {
             redirect_uris: vec![],
         }
     }
+    
+    pub fn match_redirect_uri(&self, redirect_uri: &str) -> bool {
+        self.redirect_uris.iter().find(|s| &s[..] == redirect_uri).is_some()
+    }
 }
 
 #[derive(Clone, Debug)]

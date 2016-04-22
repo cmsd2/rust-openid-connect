@@ -78,6 +78,11 @@ quick_error! {
             display("Application not found")
         }
         
+        InvalidRedirectUri {
+            description("redirect uri is not recognised")
+            display("Redirect uri is not recognised")
+        }
+        
         ValidationError(err: vlad::result::VladError) {
             from()
             description("validation error")

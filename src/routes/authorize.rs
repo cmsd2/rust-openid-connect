@@ -58,24 +58,31 @@ impl AuthorizeRequest {
     }
 }
 
-pub fn parse_authorize_request(req: &mut Request) -> Result<AuthorizeRequest> {
+pub fn parse_authorize_request(config: &Config, req: &mut Request) -> Result<AuthorizeRequest> {
     let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
     
     //TODO validate supplied oauth2 params
     
     let auth_req = try!(AuthorizeRequest::from_params(hashmap));
-    let openid_scope = "openid";
     
+    let openid_scope = "openid";
     if !auth_req.has_scope(openid_scope) {
-        Err(OpenIdConnectError::ScopeNotFound(Box::new(openid_scope.to_owned())))
-    } else {
-        Ok(auth_req)
+        return Err(OpenIdConnectError::ScopeNotFound(Box::new(openid_scope.to_owned())))
     }
+    
+    let maybe_client_app = try!(config.application_repo.find_client_application(&auth_req.client_id));
+    let client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
+    
+    if !client_app.match_redirect_uri(&auth_req.redirect_uri) {
+        return Err(OpenIdConnectError::InvalidRedirectUri);
+    }
+    
+    Ok(auth_req)
 }
 
-pub fn authorize_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn authorize_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/authorize");
-    let authorize_request = try!(parse_authorize_request(req));
+    let authorize_request = try!(parse_authorize_request(config, req));
     debug!("authorize: {:?}", authorize_request);
     
     // TODO validate subject claim
