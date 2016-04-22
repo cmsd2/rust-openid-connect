@@ -13,8 +13,8 @@ use authentication::*;
 #[derive(Clone,Debug, Serialize, Deserialize)]
 pub struct ClientApplication {
     pub client_id: String,
-    pub secret: Option<String>,
-    pub hashed_secret: Option<String>,
+    secret: Option<String>,
+    hashed_secret: Option<String>,
     pub redirect_uris: Vec<String>,
 }
 
@@ -88,7 +88,7 @@ pub trait ClientApplicationRepo where Self: Send + Sync {
     
     fn find_client_application(&self, client_id: &str) -> Result<Option<ClientApplication>>;
     
-    fn update_client_application(&self, u: ClientApplication) -> Result<()>;
+    fn update_client_application(&self, u: &ClientApplication) -> Result<()>;
     
     fn remove_client_application(&self, client_id: &str) -> Result<()>;
 }
@@ -144,12 +144,12 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
         Ok(Self::find_index(&client_applications, client_id).map(|i| client_applications[i].clone()))
     }
     
-    fn update_client_application(&self, ca: ClientApplication) -> Result<()> {
+    fn update_client_application(&self, ca: &ClientApplication) -> Result<()> {
         let mut client_applications = self.client_applications.lock().unwrap();
         
         let index = try!(Self::get_index(&client_applications, &ca.client_id));
         
-        client_applications[index] = ca;
+        client_applications[index] = ca.clone();
         
         Ok(())
     }

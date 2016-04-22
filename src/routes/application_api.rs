@@ -1,6 +1,8 @@
 use iron::prelude::*;
 use iron::status;
+use router::Router;
 use bodyparser;
+use vlad::params;
 
 use config::Config;
 use result::*;
@@ -24,6 +26,27 @@ impl ClientApplicationList {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ClientApplicationUpdate {
     redirect_uris: Option<Vec<String>>,
+}
+
+impl ClientApplicationUpdate {
+    pub fn apply(self, client_app: &mut ClientApplication) {
+        client_app.redirect_uris = self.redirect_uris.unwrap_or(vec![]);
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ClientApplicationView {
+    pub client_id: String,
+    pub redirect_uris: Vec<String>,
+}
+
+impl ClientApplicationView {
+    pub fn new(client_app: ClientApplication) -> ClientApplicationView {
+        ClientApplicationView {
+            client_id: client_app.client_id,
+            redirect_uris: client_app.redirect_uris,
+        }
+    }
 }
 
 pub fn applications_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
@@ -50,11 +73,28 @@ pub fn applications_post_handler(config: &Config, req: &mut Request) -> IronResu
     Ok(Response::with((status::Ok, ca_json)))
 }
 
-pub fn applications_put_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn get_url_param(req: &mut Request, name: &str) -> Result<String> {
+    let params = try!(req.extensions.get::<Router>().ok_or(params::ParamError::NotFound("id".to_owned())));
+    
+    let value = try!(params.find(name).map(|s| s.to_owned()).ok_or(params::ParamError::NotFound("id".to_owned())));
+    
+    Ok(value)
+}
+
+pub fn applications_put_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+    let ref client_id = try!(get_url_param(req, "id"));
+    
     let maybe_update = try!(req.get::<bodyparser::Struct<ClientApplicationUpdate>>().map_err(OpenIdConnectError::from));
     let update = try!(maybe_update.ok_or(OpenIdConnectError::EmptyPostBody));
+   
+    let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
+    let mut client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
     
-    let update_json: String = try!(serde_json::to_string(&update).map_err(OpenIdConnectError::from));
+    update.apply(&mut client_app);  
+    try!(config.application_repo.update_client_application(&client_app));
+    
+    let client_app_view = ClientApplicationView::new(client_app); 
+    let update_json: String = try!(serde_json::to_string(&client_app_view).map_err(OpenIdConnectError::from));
     
     Ok(Response::with((status::Ok, update_json)))
 }
