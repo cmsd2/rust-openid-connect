@@ -1,0 +1,10 @@
+<section id="applications">
+    <ul class="applications-list">
+        {{#each applications}}
+            {{> applications/show.html }}
+        {{else}}
+            <li class="empty">No applications</li>
+        {{/each}}
+    </ul>
+    <a href="/applications/new">New</a>
+</section>

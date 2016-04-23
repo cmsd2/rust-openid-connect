@@ -34,6 +34,7 @@ pub mod handlers;
 pub mod login;
 pub mod sessions;
 pub mod view;
+pub mod helpers;
 
 use result::{Result, OpenIdConnectError};
 

@@ -3,7 +3,7 @@ use sessions::UserSession;
 use iron::prelude::*;
 use result::Result;
 use handlebars_iron::Template;
-use serde_json::value::Value;
+use serde_json::value::{self, Value};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct View {
@@ -11,6 +11,7 @@ pub struct View {
     pub session: Option<UserSession>,
     pub view: String,
     pub layout: Option<String>,
+    pub csrf_token: Option<String>,
 }
 
 impl View {
@@ -19,6 +20,7 @@ impl View {
             view: name.into(),
             data: HashMap::new(),
             session: session,
+            csrf_token: None,
             layout: Some("_layout.html".to_owned()),
         }
     }
@@ -36,8 +38,17 @@ impl View {
             self.view.clone()
         };
         
-        debug!("rendering view {} {:?}", template_name, self);
+        let mut data = self.data;
         
-        Template::new(&template_name, self)
+        data.insert("view".to_owned(), value::to_value(&self.view));
+        data.insert("session".to_owned(), value::to_value(&self.session));
+        
+        if let Some(csrf_token) = self.csrf_token {
+            data.insert("csrf_token".to_owned(), value::to_value(&csrf_token));
+        }
+        
+        debug!("rendering view {} {:?}", template_name, data);
+        
+        Template::new(&template_name, data)
     }
 }

@@ -1,0 +1,13 @@
+<div class="client_application">
+    <div class="name">{{ name }}</div>
+    <div class="client_id">{{ client_id }}</div>
+    <ul class="redirect_uris">
+        {{#each redirect_uris}}
+            <li class="redirect_uri">{{this}}</li>
+        {{else}}
+            <li class="empty">No redirect uris</li>
+        {{/each}}
+    </ul>
+    <div><a href="/applications/{{client_id}}/edit">Edit</a></div>
+    <div><a href="/applications/{{client_id}}/delete">Delete</a></div>
+</div>

@@ -7,6 +7,7 @@ use vlad::params;
 use config::Config;
 use result::*;
 use client_application::*;
+use helpers::*;
 
 use serde_json;
 
@@ -25,17 +26,20 @@ impl ClientApplicationList {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ClientApplicationUpdate {
+    name: Option<String>,
     redirect_uris: Option<Vec<String>>,
 }
 
 impl ClientApplicationUpdate {
     pub fn apply(self, client_app: &mut ClientApplication) {
+        client_app.name = self.name;
         client_app.redirect_uris = self.redirect_uris.unwrap_or(vec![]);
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ClientApplicationView {
+    pub name: Option<String>,
     pub client_id: String,
     pub redirect_uris: Vec<String>,
 }
@@ -43,6 +47,7 @@ pub struct ClientApplicationView {
 impl ClientApplicationView {
     pub fn new(client_app: ClientApplication) -> ClientApplicationView {
         ClientApplicationView {
+            name: client_app.name,
             client_id: client_app.client_id,
             redirect_uris: client_app.redirect_uris,
         }
@@ -66,19 +71,11 @@ pub fn read_client_application_body(req: &mut Request) -> Result<ClientApplicati
 }
 
 pub fn applications_post_handler(config: &Config, _req: &mut Request) -> IronResult<Response> {
-    let ca = try!(config.application_repo.create_client_application());
+    let ca = try!(config.application_repo.create_client_application(ClientApplicationBuilder::new()));
     
     let ca_json: String = try!(serde_json::to_string(&ca).map_err(OpenIdConnectError::from));
     
     Ok(Response::with((status::Ok, ca_json)))
-}
-
-pub fn get_url_param(req: &mut Request, name: &str) -> Result<String> {
-    let params = try!(req.extensions.get::<Router>().ok_or(params::ParamError::NotFound("id".to_owned())));
-    
-    let value = try!(params.find(name).map(|s| s.to_owned()).ok_or(params::ParamError::NotFound("id".to_owned())));
-    
-    Ok(value)
 }
 
 pub fn applications_put_handler(config: &Config, req: &mut Request) -> IronResult<Response> {

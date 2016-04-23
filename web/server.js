@@ -14,6 +14,7 @@ var proxiedRoutes = [
       '^/authorize',
       '^/login',
       '^/register',
+      '^/applications',
       '^/$'
     ];
     

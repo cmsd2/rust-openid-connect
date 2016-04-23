@@ -34,6 +34,7 @@ use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
 use openid_connect::routes::application_api::*;
 use openid_connect::routes::session::*;
+use openid_connect::routes::applications;
 use openid_connect::users::*;
 use openid_connect::config::*;
 use openid_connect::handlers::*;
@@ -113,6 +114,14 @@ pub fn main() {
     router.post("/login", web_handler(&config, login_post_handler));
     router.get("/register", web_handler(&config, register_get_handler));
     router.post("/register", web_handler(&config, register_post_handler));
+    router.get("/applications", web_handler(&config, applications::applications_index_handler));
+    router.get("/applications/new", web_handler(&config, applications::applications_new_handler));
+    router.get("/applications/:id", web_handler(&config, applications::applications_show_handler));
+    router.get("/applications/:id/edit", web_handler(&config, applications::applications_edit_handler));
+    router.post("/applications/:id", web_handler(&config, applications::applications_update_handler));
+    router.post("/applications", web_handler(&config, applications::applications_create_handler));
+    /*router.get("/applications/:id/delete", web_handler(&config, applications::applications_delete_handler));
+    router.post("/applications/:id/delete", web_handler(&config, applications::applications_delete_handler));*/
     
     router.post("/token", api_handler(&config, token_post_handler));
     

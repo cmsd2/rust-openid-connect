@@ -18,9 +18,13 @@
                 <li class="page-scroll {{#if session.authenticated}}hidden{{/if}}">
                     <a href="/login">Login</a>
                 </li>
+                <li class="page-scroll {{#if session.authenticated}}hidden{{/if}}">
+                    <a href="/register">Register</a>
+                </li>
                 <li class="page-scroll {{#unless session.authenticated}}hidden{{/unless}}">
                     <a href="/logout">Logout</a>
                 </li>
+                
             </ul>
         </div>
         <!-- /.navbar-collapse -->

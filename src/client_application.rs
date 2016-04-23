@@ -12,6 +12,7 @@ use authentication::*;
 
 #[derive(Clone,Debug, Serialize, Deserialize)]
 pub struct ClientApplication {
+    pub name: Option<String>,
     pub client_id: String,
     secret: Option<String>,
     hashed_secret: Option<String>,
@@ -21,6 +22,7 @@ pub struct ClientApplication {
 impl ClientApplication {
     pub fn new(client_id: String, secret: Option<String>) -> ClientApplication {
         ClientApplication {
+            name: None,
             client_id: client_id,
             hashed_secret: Some(hash_password(secret.as_ref().map(|s| &s[..]).unwrap_or(""))),
             secret: secret,
@@ -35,17 +37,19 @@ impl ClientApplication {
 
 #[derive(Clone, Debug)]
 pub struct ClientApplicationBuilder {
-    client_id: Option<String>,
+    pub name: Option<String>,
+    pub client_id: Option<String>,
     secret: Option<String>,
     hashed_secret: Option<String>,
-    redirect_uris: Option<Vec<String>>,
+    pub redirect_uris: Option<Vec<String>>,
     
-    validation_state: ValidationState,
+    pub validation_state: ValidationState,
 }
 
 impl ClientApplicationBuilder {
     pub fn new() -> ClientApplicationBuilder {
         ClientApplicationBuilder {
+            name: None,
             client_id: None,
             secret: None,
             hashed_secret: None,
@@ -56,6 +60,7 @@ impl ClientApplicationBuilder {
     
     pub fn build(self) -> Result<ClientApplication> {
         Ok(ClientApplication {
+            name: self.name,
             client_id: try!(self.client_id.ok_or(VladError::MissingRequiredValue("client_id".to_owned()))),
             secret: self.secret,
             hashed_secret: self.hashed_secret,
@@ -63,15 +68,27 @@ impl ClientApplicationBuilder {
         })
     }
     
-    pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<bool> {
+    pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<()> {
+        self.name = try!(multimap_get_maybe_one(params, "name")).map(|s| s.to_owned());
+        
         if let Some(client_id) = try!(multimap_get_maybe_one(params, "client_id")) {
-            self.client_id = Some(client_id.to_owned());
-        } else {
-            self.validation_state.reject("client_id", VladError::MissingRequiredValue("client_id".to_owned()));
+            self.client_id = Some(client_id.to_owned()); 
         }
         
         self.secret = try!(multimap_get_maybe_one(params, "secret")).map(|s| s.to_owned());
         self.hashed_secret = try!(multimap_get_maybe_one(params, "hashed_secret")).map(|s| s.to_owned());
+        
+        self.redirect_uris = params.get("redirect_uris").map(|r| r.to_owned().into_iter().filter(|r| !r.is_empty()).collect());
+        
+        Ok(())
+    }
+    
+    pub fn validate(&mut self) -> Result<bool> {
+        self.validation_state = ValidationState::new();
+        
+        if !self.client_id.is_some() {
+            self.validation_state.reject("client_id", VladError::MissingRequiredValue("client_id".to_owned()));
+        }
         
         Ok(self.validation_state.valid)
     }
@@ -81,12 +98,14 @@ impl ClientApplicationBuilder {
         
         try!(builder.load_params(params));
         
+        try!(builder.validate());
+        
         builder.build()
     }
 }
 
 pub trait ClientApplicationRepo where Self: Send + Sync {
-    fn create_client_application(&self) -> Result<ClientApplication>;
+    fn create_client_application(&self, ca: ClientApplicationBuilder) -> Result<ClientApplication>;
     
     fn get_client_applications(&self) -> Result<Vec<ClientApplication>>;
     
@@ -128,10 +147,20 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
         Ok(client_applications.clone())
     }
     
-    fn create_client_application(&self) -> Result<ClientApplication> {
+    fn create_client_application(&self, input: ClientApplicationBuilder) -> Result<ClientApplication> {
         let mut client_applications = self.client_applications.lock().unwrap();
         
-        let ca = ClientApplication::new(new_client_id(), Some(new_secret()));
+        let mut input = input;
+        
+        input.client_id = Some(new_client_id());
+        input.secret = Some(new_secret());
+        input.hashed_secret = Some(hash_password(input.secret.as_ref().map(|s| &s[..]).unwrap_or("")));
+        
+        if ! try!(input.validate()) {  
+            return Err(OpenIdConnectError::ValidationError(VladError::ValidationError(input.validation_state)));
+        }
+        
+        let ca = try!(input.build());
         
         if Self::find_index(&client_applications, &ca.client_id).is_some() {
             Err(OpenIdConnectError::ClientApplicationAlreadyExists)

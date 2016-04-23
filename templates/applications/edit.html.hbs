@@ -1,0 +1,30 @@
+<section id="edit_application_form">
+    <div class="container">
+        <form role="form" action="/applications/{{client_id}}" method="post">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{name}}">
+            </div>
+            
+            {{#each redirect_uris}}
+                <div class="form-group">
+                    <label for="redirect_uri">Redirect URI:</label>
+                    <input type="text" class="form-control" id="redirect_uri_{{@index}}" name="redirect_uris" value="{{this}}">
+                    <button type="submit" class="btn" name="delete_redirect_uri_{{@index}}">
+                </div>
+            {{/each}}
+            
+            <div class="form-group">
+                <label for="redirect_uri">Redirect URI:</label>
+                <input type="text" class="form-control" id="redirect_uri" name="redirect_uris" value="">
+            </div>
+        
+            <input type="hidden" class="csrf_token" value="{{csrf_token}}" name="csrf_token">
+        
+            <button type="submit" class="btn btn-default">Save</button>
+            
+            <!-- TODO make cancel button go back to referer -->
+            <button type="cancel" class="btn pull-right">Cancel</button>
+        </form>
+    </div>
+</section>

@@ -1,0 +1,17 @@
+<section id="new_application_form">
+    <div class="container">
+        <form role="form" action="/applications" method="post">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{name}}">
+            </div>
+        
+            <input type="hidden" class="csrf_token" value="{{csrf_token}}" name="csrf_token">
+        
+            <button type="submit" class="btn btn-default">Login</button>
+            
+            <!-- TODO make cancel button go back to referer -->
+            <button type="cancel" class="btn pull-right">Cancel</button>
+        </form>
+    </div>
+</section>
