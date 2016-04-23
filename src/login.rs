@@ -51,6 +51,29 @@ impl LoginConfig {
 
 impl Key for LoginConfig { type Value = LoginConfig; }
 
+pub struct Foo;
+impl middleware::AfterMiddleware for Foo {
+    fn after(&self, _: &mut Request, res: Response) -> IronResult<Response> {
+        debug!("foo::after");
+        Ok(res)
+    }
+    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
+        debug!("foo::catch after");
+        Err(err)
+    }
+}
+impl middleware::BeforeMiddleware for Foo {
+    fn before(&self, req: &mut Request) -> IronResult<()> {
+        let login_config = req.get::<persistent::Read<LoginConfig>>();
+        debug!("foo::before: {:?}", login_config);
+        
+        Ok(())
+     }
+    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<()> {
+        debug!("foo::catch before"); 
+        Err(err)
+     }
+}
 impl middleware::AroundMiddleware for LoginManager {
     fn around(self, handler: Box<middleware::Handler>) -> Box<middleware::Handler> {
         let mut ch = Chain::new(handler);
@@ -58,6 +81,7 @@ impl middleware::AroundMiddleware for LoginManager {
 
         ch.link(oven::new(key));
         ch.link(persistent::Read::<LoginConfig>::both(self.config));
+        ch.link((Foo, Foo));
 
         Box::new(ch)
     }

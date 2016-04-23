@@ -43,7 +43,7 @@ use openid_connect::login;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
-        "{method} {uri} -> {status} ({response-time} ms)";
+        "{method} {uri} -> {status} ({response-time})";
    
 struct ErrorRenderer;
 
@@ -136,11 +136,13 @@ pub fn main() {
     mount.mount("/robots.txt", Static::new(Path::new("priv/robots.txt")));
     
     let mut chain = Chain::new(mount);
-    chain.around(login_manager);
     chain.link_before(sessions_controller);
-    chain.link_before(logger_before);
-    chain.link_after(logger_after);
-    chain.link_after(ErrorRenderer);
     
-    Iron::new(chain).http("0.0.0.0:8080").unwrap();
+    let mut outer_chain = Chain::new(chain);
+    outer_chain.around(login_manager);
+    outer_chain.link_before(logger_before);
+    outer_chain.link_after(logger_after);
+    outer_chain.link_after(ErrorRenderer);
+    
+    Iron::new(outer_chain).http("0.0.0.0:8080").unwrap();
 }
