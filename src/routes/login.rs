@@ -4,7 +4,8 @@ use std::collections::HashMap;
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
-use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
+use urlencoded::UrlEncodedQuery;
+use serde_json::value;
 
 use vlad::state::*;
 use vlad::result::VladError;
@@ -110,8 +111,8 @@ pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Resp
             match LoginRequestBuilder::build_from_params(&params) {
                 Ok(login_request) => {
                     // TODO these must be escaped to avoid cross-site-scripting
-                    view.data.insert("username".to_owned(), login_request.username);
-                    view.data.insert("password".to_owned(), login_request.password);
+                    view.data.insert("username".to_owned(), value::to_value(&login_request.username));
+                    view.data.insert("password".to_owned(), value::to_value(&login_request.password));
                 }
                 Err(err) => {
                     debug!("error parsing login form: {:?}", err);
@@ -127,19 +128,16 @@ pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Resp
     Ok(Response::with((status::Ok, view.template())))
 }
 
-pub fn login_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn login_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     let login_url = try!(relative_url(req, "/login", None));
+    let home_url = try!(relative_url(req, "/", None));
     
-    match req.get_ref::<UrlEncodedBody>() {
-        Ok(params) => {
-            debug!("logging in with creds {:?}", params);
-            // TODO validate csrf
-            // TODO validate credentials
-            // TODO create session and set cookie
-            Ok(Response::with((status::Ok, "Ok")))
+    match config.session_controller.login(req) {
+        Ok(login) => {
+            Ok(Response::with((status::Found, Redirect(home_url))).set(login.cookie()))
         },
         Err(err) => {
-            debug!("error parsing body: {:?}", err);
+            debug!("error logging in: {:?}", err);
             Ok(Response::with((status::Found, Redirect(login_url))))
         }
     }

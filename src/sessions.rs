@@ -13,15 +13,26 @@ use oven::prelude::*;
 use persistent;
 use plugin;
 use plugin::Extensible;
+use urlencoded::UrlEncodedBody;
 
 use result::*;
 use login::*;
 use users::*;
+use vlad::params::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Credentials {
     username: String,
     password: String,
+}
+
+impl Credentials {
+    pub fn new<A: Into<String>, B: Into<String>>(username: A, password: B) -> Credentials {
+        Credentials {
+            username: username.into(),
+            password: password.into(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -180,6 +191,34 @@ impl SessionController {
         } else {
             Ok(false)
         }
+    }
+    
+    pub fn login(&self, req: &mut Request) -> Result<Login<UserSession>> {
+        let login_config = try!(req.get::<persistent::Read<LoginConfig>>()).clone();
+        let params = try!(req.get_ref::<UrlEncodedBody>());
+
+        debug!("logging in with creds {:?}", params);
+        // TODO validate csrf
+        // TODO validate credentials
+        // TODO create session and set cookie
+        
+        let username = try!(multimap_get_maybe_one(params, "username").map_err(|e| {
+            debug!("error reading username: {:?}", e);
+            OpenIdConnectError::InvalidUsernameOrPassword
+        })).unwrap_or("");
+        
+        let password = try!(multimap_get_maybe_one(params, "password").map_err(|e| {
+            debug!("error reading password: {:?}", e);
+            OpenIdConnectError::InvalidUsernameOrPassword
+        })).unwrap_or("");
+        
+        let creds = Credentials::new(username, password);
+        
+        let session = try!(self.sessions.authenticate(&creds));
+
+        let login_modifier = Login::new(&login_config, Some(session));
+
+        Ok(login_modifier)
     }
 }
 

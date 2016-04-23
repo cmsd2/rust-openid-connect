@@ -15,10 +15,10 @@
                 <li class="hidden">
                     <a href="#page-top"></a>
                 </li>
-                <li class="page-scroll {{#if session}}hidden{{/if}}">
+                <li class="page-scroll {{#if session.authenticated}}hidden{{/if}}">
                     <a href="/login">Login</a>
                 </li>
-                <li class="page-scroll {{#unless session}}hidden{{/unless}}">
+                <li class="page-scroll {{#unless session.authenticated}}hidden{{/unless}}">
                     <a href="/logout">Logout</a>
                 </li>
             </ul>

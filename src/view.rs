@@ -3,10 +3,11 @@ use sessions::UserSession;
 use iron::prelude::*;
 use result::Result;
 use handlebars_iron::Template;
+use serde_json::value::Value;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct View {
-    pub data: HashMap<String, String>,
+    pub data: HashMap<String, Value>,
     pub session: Option<UserSession>,
     pub view: String,
     pub layout: Option<String>,
@@ -34,6 +35,8 @@ impl View {
         } else {
             self.view.clone()
         };
+        
+        debug!("rendering view {} {:?}", template_name, self);
         
         Template::new(&template_name, self)
     }
