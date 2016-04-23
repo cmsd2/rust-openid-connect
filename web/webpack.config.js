@@ -1,3 +1,4 @@
+var path = require('path');
 var ExtractTextPlugin = require("extract-text-webpack-plugin");
 var CopyWebpackPlugin = require("copy-webpack-plugin");
 
@@ -6,22 +7,29 @@ module.exports = {
   entry: {
     "app": [
       "bootstrap/css/bootstrap.css", 
-      "./web/js/app.js",
-      "./web/css/app.scss"
+      "./src/js/app.js",
+      "./src/css/app.scss"
     ],
   },
 
   output: {
-    path: "./priv/",
+    path: path.join(__dirname, 'dist'),
     filename: "js/app.js"
   },
+  
+  plugins: [
+    new ExtractTextPlugin("css/app.css"),
+    new CopyWebpackPlugin([
+      { from: path.join(__dirname, 'src/assets') },
+    ])
+  ],
 
   resolve: {
     alias: {
-      sinon: __dirname + '/node_modules/sinon/pkg/sinon',
-      bootstrap: __dirname + '/node_modules/bootstrap/dist',
-      jquery: __dirname + '/node_modules/jquery/dist',
-      openid_connect: __dirname + "/web/js"
+      sinon: path.join(__dirname, 'node_modules/sinon/pkg/sinon'),
+      bootstrap: path.join(__dirname, 'node_modules/bootstrap/dist'),
+      jquery: path.join(__dirname, 'node_modules/jquery/dist'),
+      openid_connect: path.join(__dirname, 'src/js')
     }
   },
 
@@ -56,13 +64,6 @@ module.exports = {
       },      
     ]
   },
-
-  plugins: [
-    new ExtractTextPlugin("css/app.css"),
-    new CopyWebpackPlugin([
-      { from: "./web/assets" },
-    ])
-  ],
 
   externals: {
     "jsdom": "window",
