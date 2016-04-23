@@ -7,7 +7,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="#page-top">Foo</a>
+            <a class="navbar-brand" href="#page-top">Rust OpenId Connect</a>
         </div>
 
         <div class="collapse navbar-collapse" id="navbar-collapse-1">
@@ -15,11 +15,11 @@
                 <li class="hidden">
                     <a href="#page-top"></a>
                 </li>
-                <li class="page-scroll">
-                    <!-- if not logged in and not logging in <a href="/login">Login</a> -->
+                <li class="page-scroll {{#if session}}hidden{{/if}}">
+                    <a href="/login">Login</a>
                 </li>
-                <li class="page-scroll">
-                    <!-- if logged in <a href="/logout">Logout</a> -->
+                <li class="page-scroll {{#unless session}}hidden{{/unless}}">
+                    <a href="/logout">Logout</a>
                 </li>
             </ul>
         </div>

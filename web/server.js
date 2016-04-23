@@ -8,13 +8,26 @@ var proxy = require('http-proxy-middleware');
 var app = express();
 var compiler = webpack(config);
 
-app.use(proxy([
-      '/api',
-      '/token',
-      '/authorize',
-      '/login',
-      '/register'
-    ], {
+var proxiedRoutes = [
+      '^/api/',
+      '^/token',
+      '^/authorize',
+      '^/login',
+      '^/register',
+      '^/$'
+    ];
+    
+var filter = function(path, req) {
+  var i, len = proxiedRoutes.length;
+  for(i = 0; i < len; i++) {
+    if(path.match(proxiedRoutes[i])) {
+      return true;
+    }
+  }
+  return false;
+};
+
+app.use(proxy(filter, {
   target: 'http://localhost:8080', 
   changeOrigin: false,
   xfwd: true,

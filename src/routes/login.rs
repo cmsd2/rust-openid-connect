@@ -5,7 +5,6 @@ use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
-use handlebars_iron::Template;
 
 use vlad::state::*;
 use vlad::result::VladError;
@@ -14,6 +13,7 @@ use result::{Result, OpenIdConnectError};
 use vlad::params::*;
 use urls::*;
 use config::Config;
+use view::View;
 
 #[derive(Clone, Debug)]
 pub struct LoginRequest {
@@ -103,15 +103,15 @@ pub fn parse_login_request(req: &mut Request) -> Result<LoginRequest> {
 }
 
 pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
-    let mut data = HashMap::<String,String>::new();
+    let mut view = try!(View::new_for_session("login.html", req));
     
     match req.get_ref::<UrlEncodedQuery>() {
         Ok(params) => {
             match LoginRequestBuilder::build_from_params(&params) {
                 Ok(login_request) => {
                     // TODO these must be escaped to avoid cross-site-scripting
-                    data.insert("username".to_owned(), login_request.username);
-                    data.insert("password".to_owned(), login_request.password);
+                    view.data.insert("username".to_owned(), login_request.username);
+                    view.data.insert("password".to_owned(), login_request.password);
                 }
                 Err(err) => {
                     debug!("error parsing login form: {:?}", err);
@@ -123,10 +123,8 @@ pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Resp
             debug!("error parsing query params: {:?}", err);
         }
     }
-
-    data.insert("_view".to_owned(), "login.html".to_owned());
     
-    Ok(Response::with((status::Ok, Template::new("_layout.html", data))))
+    Ok(Response::with((status::Ok, view.template())))
 }
 
 pub fn login_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {

@@ -73,7 +73,7 @@ pub fn main() {
     let login_manager = login::LoginManager::new(cookie_signing_key);
     let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
     
-    let config = Config::new(user_repo, application_repo, sessions_controller);
+    let config = Config::new(user_repo, application_repo, sessions_controller.clone());
     
     // html content type;
     // html error pages
@@ -137,6 +137,7 @@ pub fn main() {
     
     let mut chain = Chain::new(mount);
     chain.around(login_manager);
+    chain.link_before(sessions_controller);
     chain.link_before(logger_before);
     chain.link_after(logger_after);
     chain.link_after(ErrorRenderer);

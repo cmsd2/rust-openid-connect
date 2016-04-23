@@ -7,8 +7,12 @@ use rand::Rng;
 use rustc_serialize::base64;
 use rustc_serialize::base64::ToBase64;
 use iron::prelude::*;
+use iron::BeforeMiddleware;
+use iron::typemap::Key;
 use oven::prelude::*;
 use persistent;
+use plugin;
+use plugin::Extensible;
 
 use result::*;
 use login::*;
@@ -44,6 +48,20 @@ impl LoginSession for UserSession {
         self.session_id.clone()
     }
 }
+
+pub type SessionLogin = Login<UserSession>;
+
+impl Key for UserSession { type Value = Option<UserSession>; }
+
+impl<'a, 'b> plugin::Plugin<Request<'a, 'b>> for UserSession {
+    type Error = OpenIdConnectError;
+    
+    fn eval(req: &mut Request) -> Result<Option<UserSession>> {
+        debug!("getting session from middleware chain");
+        req.extensions().get::<UserSession>().ok_or(OpenIdConnectError::NoSessionLoaded).map(|s| s.to_owned())
+    }
+}
+
 
 pub trait Sessions: Send + Sync + 'static {
     fn authenticate(&self, creds: &Credentials) -> Result<UserSession>;
@@ -127,6 +145,7 @@ impl SessionController {
     }
     
     pub fn load_session_id(&self, req: &mut Request) -> Result<Option<String>> {
+        debug!("loading session id");
         let config = try!(req.get::<persistent::Read<LoginConfig>>());
                 
         let session = match req.get_cookie(&config.cookie_base.name) {
@@ -140,10 +159,12 @@ impl SessionController {
     }
 
     pub fn load_session(&self, req: &mut Request) -> Result<Login<UserSession>> {
+        debug!("loading session");
         let config_arc = try!(req.get::<persistent::Read<LoginConfig>>());
         let config = (*config_arc).clone();
                 
         let session = if let Some(session_id) = try!(self.load_session_id(req)) {
+            debug!("looking up session {}", session_id);
             try!(self.sessions.lookup(&session_id))
         } else {
             None
@@ -152,11 +173,33 @@ impl SessionController {
         Ok(Login::new(&config, session))
     }
     
-    pub fn clear_session(&self, req: &mut Request) -> Result<bool> { 
+    pub fn clear_session(&self, req: &mut Request) -> Result<bool> {
+        debug!("clearing session");
         if let Some(session_id) = try!(self.load_session_id(req)) {
             self.sessions.remove(&session_id)
         } else {
             Ok(false)
+        }
+    }
+}
+
+impl BeforeMiddleware for SessionController {
+    fn before(&self, req: &mut Request) -> IronResult<()> {
+        match self.load_session(req) {
+            Ok(login) => {
+                debug!("injecting session into middleware chain {:?}", login);
+                req.extensions_mut().insert::<UserSession>(login.session);
+                Ok(())
+            },
+            Err(OpenIdConnectError::PersistentError(persistent::PersistentError::NotFound)) => {
+                debug!("no session found");
+                req.extensions_mut().insert::<UserSession>(None);
+                Ok(())
+            }
+            Err(e) => {
+                req.extensions_mut().insert::<UserSession>(None);
+                Err(IronError::from(OpenIdConnectError::from(e)))
+            }
         }
     }
 }

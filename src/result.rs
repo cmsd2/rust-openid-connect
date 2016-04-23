@@ -143,6 +143,11 @@ quick_error! {
             description("invalid username or password")
             display("Invalid username or password")
         }
+        
+        NoSessionLoaded {
+            description("server didn't load user session")
+            display("server didn't load user session")
+        }
     }
 }
 
