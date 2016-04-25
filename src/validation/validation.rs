@@ -52,9 +52,9 @@ impl <M> Validator<M> for ValidationSchema<M> {
 
 #[cfg(test)]
 mod tests {
-    use validation::*;
-    use ::result::*;
-    use state::*;
+    use super::*;
+    use super::super::result::*;
+    use super::super::state::*;
     
     #[allow(dead_code)]
     struct TestStruct {
@@ -103,7 +103,7 @@ mod tests {
         let mut v = ValidationSchema::<TestStruct>::new();
         
         v.rule(Box::new(|_m: &TestStruct, vs: &mut ValidationState| {
-            vs.reject("field name", VladError::InvalidValue("test error".to_owned()));
+            vs.reject("field name", ValidationError::InvalidValue("test error".to_owned()));
             Ok(())
         }));
         
@@ -117,7 +117,7 @@ mod tests {
         let mut v = ValidationSchema::<TestStruct>::new();
         
         v.rule(Box::new(|_m: &TestStruct, _vs: &mut ValidationState| -> Result<()> {
-            Err(VladError::ApplicationError("test error".to_owned()))
+            Err(ValidationError::ApplicationError("test error".to_owned()))
         }));
         
         let a = TestStruct::new(123, "hello");

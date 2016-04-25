@@ -53,9 +53,9 @@ mod test {
     use std::collections::HashMap;
     
     use super::*;
-    use result;
-    use params::*;
-    use state::*;
+    use super::super::result;
+    use super::super::params::*;
+    use super::super::state::*;
     
     #[derive(Clone, Debug, PartialEq)]
     pub struct TestStruct {
@@ -79,13 +79,13 @@ mod test {
         pub fn build(self) -> result::Result<TestStruct> {
             if self.state.valid {
                 Ok(TestStruct {
-                    number: try!(self.number.ok_or(result::VladError::MissingRequiredValue("number".to_owned()))),
+                    number: try!(self.number.ok_or(result::ValidationError::MissingRequiredValue("number".to_owned()))),
                     maybe_number: self.maybe_number,
-                    text: try!(self.text.ok_or(result::VladError::MissingRequiredValue("text".to_owned()))),
+                    text: try!(self.text.ok_or(result::ValidationError::MissingRequiredValue("text".to_owned()))),
                     maybe_text: self.maybe_text
                 })
             } else {
-                Err(result::VladError::ValidationError(self.state))
+                Err(result::ValidationError::ValidationError(self.state))
             }
         }
         
@@ -94,16 +94,16 @@ mod test {
                 if let Ok(number) = number.parse::<i32>() {
                     self.number = Some(number);
                 } else {
-                    self.state.reject("number", result::VladError::InvalidValue("test msg".to_owned()));
+                    self.state.reject("number", result::ValidationError::InvalidValue("test msg".to_owned()));
                 }
             } else {
-                self.state.reject("number", result::VladError::MissingRequiredValue("test msg".to_owned()));
+                self.state.reject("number", result::ValidationError::MissingRequiredValue("test msg".to_owned()));
             }
             
             if let Some(text) = try!(multimap_get_maybe_one(values, "text")) {
                 self.text = Some(text.to_owned());
             } else {
-                self.state.reject("text", result::VladError::MissingRequiredValue("test msg".to_owned()));
+                self.state.reject("text", result::ValidationError::MissingRequiredValue("test msg".to_owned()));
             }
             
             Ok(self.state.valid)
@@ -160,7 +160,7 @@ mod test {
         
         assert_eq!(build_result.is_ok(), false);
         
-        if let result::VladError::ValidationError(state) = build_result.err().unwrap() {
+        if let result::ValidationError::ValidationError(state) = build_result.err().unwrap() {
             assert_eq!(state.errors.is_empty(), true);
             assert_eq!(state.fields.get("text").unwrap().errors.len(), 1);
             assert_eq!(format!("{}", state.fields.get("text").unwrap().errors.get(0).unwrap()), "missing required value: test msg");
@@ -183,7 +183,7 @@ mod test {
         let mut builder = Builder::<String, TestStructBuilder>::new();
             
         builder.rule(Box::new(|_input: &String, _accumulator: &mut TestStructBuilder, _state: &mut ValidationState| -> result::Result<()> {
-            Err(result::VladError::ApplicationError("test error".to_owned()))
+            Err(result::ValidationError::ApplicationError("test error".to_owned()))
         }));
         
         assert_eq!(builder.build(&String::new(), &mut accumulator).is_ok(), true);
