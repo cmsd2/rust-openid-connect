@@ -6,9 +6,9 @@ use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use handlebars_iron::Template;
 
-use vlad::result::{VladError};
-use vlad::state::*;
-use vlad::params::*;
+use validation::result::ValidationError;
+use validation::state::*;
+use validation::params::*;
 
 use result::{Result, OpenIdConnectError};
 use urls::*;
@@ -47,7 +47,7 @@ impl RegisterRequestBuilder {
                 password: self.password.unwrap(),
             })
         } else {
-            Err(OpenIdConnectError::from(VladError::ValidationError(self.validation_state)))
+            Err(OpenIdConnectError::from(ValidationError::ValidationError(self.validation_state)))
         }
     }
     
@@ -55,13 +55,13 @@ impl RegisterRequestBuilder {
         if let Some(username) = try!(multimap_get_maybe_one(params, "username")) {
             self.username = Some(username.to_owned());
         } else {
-            self.validation_state.reject("username", VladError::MissingRequiredValue("username".to_owned()));
+            self.validation_state.reject("username", ValidationError::MissingRequiredValue("username".to_owned()));
         }
         
         if let Some(password) = try!(multimap_get_maybe_one(params, "password")) {
             self.password = Some(password.to_owned());
         } else {
-            self.validation_state.reject("password", VladError::MissingRequiredValue("password".to_owned()));
+            self.validation_state.reject("password", ValidationError::MissingRequiredValue("password".to_owned()));
         }
         
         Ok(self.validation_state.valid)

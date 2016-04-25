@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
-use vlad::result::VladError;
-use vlad::params::*;
-use vlad::state::*;
+use validation::result::ValidationError;
+use validation::params::*;
+use validation::state::*;
 
 use result::{Result, OpenIdConnectError};
 use authentication::*;
@@ -49,7 +49,7 @@ impl UserBuilder {
     pub fn build(self) -> Result<User> {
         Ok(User {
             id: new_user_id(),
-            username: try!(self.username.ok_or(VladError::MissingRequiredValue("username".to_owned()))),
+            username: try!(self.username.ok_or(ValidationError::MissingRequiredValue("username".to_owned()))),
             password: self.password,
             hashed_password: self.hashed_password,
         })
@@ -59,7 +59,7 @@ impl UserBuilder {
         if let Some(username) = try!(multimap_get_maybe_one(params, "username")) {
             self.username = Some(username.to_owned());
         } else {
-            self.validation_state.reject("username", VladError::MissingRequiredValue("username".to_owned()));
+            self.validation_state.reject("username", ValidationError::MissingRequiredValue("username".to_owned()));
         }
         
         self.password = try!(multimap_get_maybe_one(params, "password")).map(|s| s.to_owned());

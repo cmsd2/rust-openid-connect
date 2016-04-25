@@ -17,7 +17,6 @@ log = "0.3.6"
 env_logger = "0.3.3"
 staticfile = "0.2.0"
 mount = "0.1.0"
-vlad = { path = "../vlad" }
 rustc-serialize = "0.3"
 rand = "0.3.14"
 url = "0.5.8"

@@ -12,7 +12,6 @@ extern crate urlencoded;
 extern crate handlebars_iron;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate log;
-extern crate vlad;
 extern crate serde;
 extern crate serde_json;
 extern crate rustc_serialize;
@@ -39,6 +38,7 @@ pub mod helpers;
 pub mod jwt;
 pub mod oauth2;
 pub mod service;
+pub mod validation;
 
 use result::{Result, OpenIdConnectError};
 

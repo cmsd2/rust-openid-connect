@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use vlad::result::VladError;
+use validation::result::ValidationError;
 
 use result::{Result, OpenIdConnectError};
 use authentication::*;
@@ -58,7 +58,7 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
         input.hashed_secret = Some(hash_password(input.secret.as_ref().map(|s| &s[..]).unwrap_or("")));
         
         if ! try!(input.validate()) {  
-            return Err(OpenIdConnectError::ValidationError(VladError::ValidationError(input.validation_state)));
+            return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(input.validation_state)));
         }
         
         let ca = try!(input.build());

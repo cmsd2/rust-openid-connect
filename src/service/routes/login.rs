@@ -7,11 +7,10 @@ use iron::modifiers::Redirect;
 use urlencoded::UrlEncodedQuery;
 use serde_json::value;
 
-use vlad::state::*;
-use vlad::result::VladError;
-
+use validation::state::*;
+use validation::result::ValidationError;
+use validation::params::*;
 use result::{Result, OpenIdConnectError};
-use vlad::params::*;
 use urls::*;
 use config::Config;
 use view::View;
@@ -51,7 +50,7 @@ impl LoginRequestBuilder {
                 csrf_token: self.csrf_token.unwrap(),
             })
         } else {
-            Err(OpenIdConnectError::from(VladError::ValidationError(self.validation_state)))
+            Err(OpenIdConnectError::from(ValidationError::ValidationError(self.validation_state)))
         }
     }
     
@@ -59,19 +58,19 @@ impl LoginRequestBuilder {
         if let Some(username) = try!(multimap_get_maybe_one(hashmap, "username")) {
             self.username = Some(username.to_owned());
         } else {
-            self.validation_state.reject("username", VladError::MissingRequiredValue("username".to_owned()));
+            self.validation_state.reject("username", ValidationError::MissingRequiredValue("username".to_owned()));
         }
         
         if let Some(password) = try!(multimap_get_maybe_one(hashmap, "password")) {
             self.password = Some(password.to_owned());
         } else {
-            self.validation_state.reject("password", VladError::MissingRequiredValue("password".to_owned()));
+            self.validation_state.reject("password", ValidationError::MissingRequiredValue("password".to_owned()));
         }
         
         if let Some(csrf_token) = try!(multimap_get_maybe_one(hashmap, "csrf_token")) {
             self.csrf_token = Some(csrf_token.to_owned());
         } else {
-            self.validation_state.reject("csrf_token", VladError::MissingRequiredValue("csrf_token".to_owned()));
+            self.validation_state.reject("csrf_token", ValidationError::MissingRequiredValue("csrf_token".to_owned()));
         }
         
         Ok(self.validation_state.valid)

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use serde::{Serializer, Deserializer};
-use vlad::result::VladError;
-use vlad::params::*;
-use vlad::state::*;
+use validation::result::ValidationError;
+use validation::params::*;
+use validation::state::*;
 
 use result::Result;
 use authentication::*;
@@ -59,7 +59,7 @@ impl ClientApplicationBuilder {
     pub fn build(self) -> Result<ClientApplication> {
         Ok(ClientApplication {
             name: self.name,
-            client_id: try!(self.client_id.ok_or(VladError::MissingRequiredValue("client_id".to_owned()))),
+            client_id: try!(self.client_id.ok_or(ValidationError::MissingRequiredValue("client_id".to_owned()))),
             secret: self.secret,
             hashed_secret: self.hashed_secret,
             redirect_uris: self.redirect_uris.unwrap_or(vec![]),
@@ -85,7 +85,7 @@ impl ClientApplicationBuilder {
         self.validation_state = ValidationState::new();
         
         if !self.client_id.is_some() {
-            self.validation_state.reject("client_id", VladError::MissingRequiredValue("client_id".to_owned()));
+            self.validation_state.reject("client_id", ValidationError::MissingRequiredValue("client_id".to_owned()));
         }
         
         Ok(self.validation_state.valid)

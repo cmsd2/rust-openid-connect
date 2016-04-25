@@ -6,8 +6,8 @@ use iron::status;
 use urlencoded;
 use bodyparser;
 use serde_json;
-use vlad::params;
-use vlad;
+use validation::params;
+use validation;
 use url;
 use persistent;
 
@@ -92,7 +92,7 @@ quick_error! {
             display("Redirect uri is not recognised")
         }
         
-        ValidationError(err: vlad::result::VladError) {
+        ValidationError(err: validation::result::ValidationError) {
             from()
             description("validation error")
             display("Validation error: {}", err)

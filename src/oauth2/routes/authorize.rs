@@ -7,7 +7,7 @@ use iron::modifiers::Redirect;
 use urlencoded::UrlEncodedQuery;
 
 use result::{Result, OpenIdConnectError};
-use vlad::params::*;
+use validation::params::*;
 use urls::*;
 use ::ResponseType;
 use config::Config;

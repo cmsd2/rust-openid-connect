@@ -5,12 +5,12 @@ use iron::status;
 use urlencoded::UrlEncodedBody;
 
 use result::{Result, OpenIdConnectError};
-use vlad::params::*;
 use config::Config;
-use vlad::result;
-use vlad::result::VladError;
-use vlad::state::*;
-use vlad::builder::*;
+use validation::params::*;
+use validation::result;
+use validation::result::ValidationError;
+use validation::state::*;
+use validation::builder::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GrantType {
@@ -63,13 +63,13 @@ impl TokenRequestBuilder {
             Ok(TokenRequest {
                 grant_type: try!(
                     self.grant_type
-                        .ok_or(OpenIdConnectError::from(VladError::MissingRequiredValue("grant_type".to_owned())))
+                        .ok_or(OpenIdConnectError::from(ValidationError::MissingRequiredValue("grant_type".to_owned())))
                         .and_then(|gt| GrantType::from_str(&gt))),
                 code: self.code,
-                redirect_uri: try!(self.redirect_uri.ok_or(VladError::MissingRequiredValue("redirect_uri".to_owned())))
+                redirect_uri: try!(self.redirect_uri.ok_or(ValidationError::MissingRequiredValue("redirect_uri".to_owned())))
             })
         } else {
-            Err(OpenIdConnectError::from(result::VladError::ValidationError(self.validation_state)))
+            Err(OpenIdConnectError::from(result::ValidationError::ValidationError(self.validation_state)))
         }
     }
     
@@ -82,16 +82,16 @@ impl TokenRequestBuilder {
                 grant_type = Some(a_grant_type);
                 self.grant_type = Some(my_grant_type_str);
             } else {
-                self.validation_state.reject("grant_type", result::VladError::InvalidValue("grant_type".to_owned()));
+                self.validation_state.reject("grant_type", result::ValidationError::InvalidValue("grant_type".to_owned()));
             }
         } else {
-            self.validation_state.reject("grant_type", result::VladError::MissingRequiredValue("grant_type".to_owned()));
+            self.validation_state.reject("grant_type", result::ValidationError::MissingRequiredValue("grant_type".to_owned()));
         }
         
         if let Some(code) = try!(multimap_get_maybe_one(params, "code")) {
             self.code = Some(code.to_owned());
         } else if grant_type == Some(GrantType::AuthorizationCode) {
-            self.validation_state.reject("code", result::VladError::MissingRequiredValue("code".to_owned()));
+            self.validation_state.reject("code", result::ValidationError::MissingRequiredValue("code".to_owned()));
         }
             
         Ok(())

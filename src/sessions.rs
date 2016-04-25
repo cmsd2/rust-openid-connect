@@ -18,7 +18,7 @@ use urlencoded::UrlEncodedBody;
 use result::*;
 use login_manager::*;
 use users::*;
-use vlad::params::*;
+use validation::params::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Credentials {
