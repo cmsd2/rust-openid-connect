@@ -27,7 +27,6 @@ use logger::Logger;
 use logger::format::Format;
 use handlebars_iron::{HandlebarsEngine, DirectorySource};
 
-use openid_connect::routes::login::*;
 use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
 use openid_connect::routes::application_api::*;
@@ -36,9 +35,10 @@ use openid_connect::routes::applications;
 use openid_connect::users::*;
 use openid_connect::config::*;
 use openid_connect::handlers::*;
-use openid_connect::oauth2::*;
+use openid_connect::oauth2;
 use openid_connect::sessions;
-use openid_connect::login;
+use openid_connect::service;
+use openid_connect::login_manager;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -64,12 +64,12 @@ pub fn main() {
     let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
     user_repo.add_user(User::new("1".to_owned(), "admin".to_owned(), Some("admin".to_owned()))).unwrap();
     
-    let application_repo = Arc::new(Box::new(InMemoryClientApplicationRepo::new()) as Box<ClientApplicationRepo>);
+    let application_repo = Arc::new(Box::new(oauth2::InMemoryClientApplicationRepo::new()) as Box<oauth2::ClientApplicationRepo>);
     
     let cookie_signing_key = b"My secret key"[..].to_owned();
     
     let sessions = Arc::new(Box::new(sessions::InMemorySessions::new(user_repo.clone())) as Box<sessions::Sessions>);
-    let login_manager = login::LoginManager::new(cookie_signing_key);
+    let login_manager = login_manager::LoginManager::new(cookie_signing_key);
     let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
     
     let config = Config::new(user_repo, application_repo, sessions_controller.clone());
@@ -106,10 +106,10 @@ pub fn main() {
     
     let mut router = Router::new();
 //    router.get("/.well-known/)
-    router.get("/authorize", web_handler(&config, authorize_handler));
+    router.get("/authorize", web_handler(&config, oauth2::authorize_handler));
     router.get("/", web_handler(&config, home_handler));
-    router.get("/login", web_handler(&config, login_get_handler));
-    router.post("/login", web_handler(&config, login_post_handler));
+    router.get("/login", web_handler(&config, service::login_get_handler));
+    router.post("/login", web_handler(&config, service::login_post_handler));
     router.get("/register", web_handler(&config, register_get_handler));
     router.post("/register", web_handler(&config, register_post_handler));
     router.get("/applications", web_handler(&config, applications::applications_index_handler));
@@ -121,7 +121,7 @@ pub fn main() {
     /*router.get("/applications/:id/delete", web_handler(&config, applications::applications_delete_handler));
     router.post("/applications/:id/delete", web_handler(&config, applications::applications_delete_handler));*/
     
-    router.post("/token", api_handler(&config, token_post_handler));
+    router.post("/token", api_handler(&config, oauth2::token_post_handler));
     
     let mut api_router = Router::new();
     api_router.get("/session", api_handler(&config, session_get_handler));

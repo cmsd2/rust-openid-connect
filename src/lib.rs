@@ -32,12 +32,13 @@ pub mod users;
 pub mod client_application;
 pub mod config;
 pub mod handlers;
-pub mod login;
+pub mod login_manager;
 pub mod sessions;
 pub mod view;
 pub mod helpers;
 pub mod jwt;
 pub mod oauth2;
+pub mod service;
 
 use result::{Result, OpenIdConnectError};
 

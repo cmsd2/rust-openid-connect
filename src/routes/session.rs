@@ -6,7 +6,7 @@ use iron::status;
 
 use config::Config;
 use result::*;
-use login::*;
+use login_manager::*;
 use sessions::*;
 
 pub fn parse_credentials(req: &mut Request) -> Result<Credentials> {

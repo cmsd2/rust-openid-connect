@@ -16,7 +16,7 @@ use plugin::Extensible;
 use urlencoded::UrlEncodedBody;
 
 use result::*;
-use login::*;
+use login_manager::*;
 use users::*;
 use vlad::params::*;
 
