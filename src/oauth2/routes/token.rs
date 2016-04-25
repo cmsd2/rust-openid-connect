@@ -38,6 +38,16 @@ pub struct TokenRequest {
     redirect_uri: String,
 }
 
+impl TokenRequest {
+    pub fn new(grant_type: GrantType, code: Option<String>, redirect_uri: String) -> TokenRequest {
+        TokenRequest {
+            grant_type: grant_type,
+            code: code,
+            redirect_uri: redirect_uri,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct TokenRequestBuilder {
     grant_type: Option<String>,
@@ -74,13 +84,20 @@ impl TokenRequestBuilder {
     }
     
     pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<()> {
-        let mut grant_type: Option<GrantType> = None;
+        self.grant_type = try!(multimap_get_maybe_one(params, "grant_type")).map(|s| s.to_owned()); 
+        self.code = try!(multimap_get_maybe_one(params, "code")).map(|s| s.to_owned());
+            
+        Ok(())
+    }
+    
+    pub fn validate(&mut self) -> Result<bool> {
+        self.validation_state = ValidationState::new();
         
-        if let Some(grant_type_str) = try!(multimap_get_maybe_one(params, "grant_type")) {
-            let my_grant_type_str = grant_type_str.to_owned();
-            if let Ok(a_grant_type) = GrantType::from_str(&my_grant_type_str) {
-                grant_type = Some(a_grant_type);
-                self.grant_type = Some(my_grant_type_str);
+        if let Some(ref grant_type_str) = self.grant_type {
+            if let Ok(grant_type) = GrantType::from_str(grant_type_str) {
+                if self.code.is_none() && grant_type == GrantType::AuthorizationCode {
+                    self.validation_state.reject("code", result::ValidationError::MissingRequiredValue("code".to_owned()));
+                }
             } else {
                 self.validation_state.reject("grant_type", result::ValidationError::InvalidValue("grant_type".to_owned()));
             }
@@ -88,13 +105,7 @@ impl TokenRequestBuilder {
             self.validation_state.reject("grant_type", result::ValidationError::MissingRequiredValue("grant_type".to_owned()));
         }
         
-        if let Some(code) = try!(multimap_get_maybe_one(params, "code")) {
-            self.code = Some(code.to_owned());
-        } else if grant_type == Some(GrantType::AuthorizationCode) {
-            self.validation_state.reject("code", result::ValidationError::MissingRequiredValue("code".to_owned()));
-        }
-            
-        Ok(())
+        Ok(self.validation_state.valid)
     }
     
     pub fn build_from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<TokenRequest> {
@@ -102,7 +113,18 @@ impl TokenRequestBuilder {
 
         try!(builder.load_params(hashmap));
         
+        try!(builder.validate());
+        
         builder.build()
+    }
+    
+    pub fn build_from_request(req: &mut Request) -> Result<TokenRequest> {
+        let hashmap = try!(req.get_ref::<UrlEncodedBody>());
+        debug!("token request body: {:?}", hashmap);
+    
+        let token_request = try!(Self::build_from_params(hashmap));
+    
+        Ok(token_request)
     }
 }
 
@@ -118,35 +140,11 @@ pub struct TokenResponse {
 #[derive(Clone, Debug)]
 pub struct TokenErrorResponse;
 
-impl TokenRequest {
-    pub fn new(grant_type: GrantType, code: Option<String>, redirect_uri: String) -> TokenRequest {
-        TokenRequest {
-            grant_type: grant_type,
-            code: code,
-            redirect_uri: redirect_uri,
-        }
-    }
-    
-    pub fn from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<TokenRequest> {
-        TokenRequestBuilder::build_from_params(hashmap)
-    }
-}
-
-pub fn parse_token_request(req: &mut Request) -> Result<TokenRequest> {
-    let hashmap = try!(req.get_ref::<UrlEncodedBody>());
-    debug!("token request body: {:?}", hashmap);
-    
-    //TODO validate supplied oauth2 params
-    
-    let token_request = try!(TokenRequest::from_params(hashmap));
-    
-    Ok(token_request)
-}
 
 pub fn token_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/token");
     
-    let token_request = try!(parse_token_request(req));
+    let token_request = try!(TokenRequestBuilder::build_from_request(req));
     
     debug!("token request: {:?}", token_request);
     
