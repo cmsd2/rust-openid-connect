@@ -102,6 +102,11 @@ pub fn parse_login_request(req: &mut Request) -> Result<LoginRequest> {
     Err(OpenIdConnectError::NotImplemented)
 }
 
+/// called by user agent, probably redirected from authorize
+/// login with cookie if possible
+/// if not logged in or reprompting for credentials, render login form
+/// otherwise redirect to caller
+/// on error set flash error and render login form
 pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
     let mut view = try!(View::new_for_session("login.html", req));
     
@@ -127,6 +132,11 @@ pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Resp
     Ok(Response::with((status::Ok, view.template())))
 }
 
+/// called by user agent form post
+/// login with credentials if possible
+/// if not logged in, render login form with flash error
+/// otherwise redirect to caller
+/// on error, set flash error and render login form
 pub fn login_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     let login_url = try!(relative_url(req, "/login", None));
     let home_url = try!(relative_url(req, "/", None));

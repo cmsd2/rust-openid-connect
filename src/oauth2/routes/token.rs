@@ -140,7 +140,9 @@ pub struct TokenResponse {
 #[derive(Clone, Debug)]
 pub struct TokenErrorResponse;
 
-
+/// called by RP server
+/// exchange code for access_token, id_token and maybe refresh_token
+/// on error render error response
 pub fn token_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/token");
     
