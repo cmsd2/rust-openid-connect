@@ -8,9 +8,12 @@ use urlencoded::UrlEncodedQuery;
 
 use result::{Result, OpenIdConnectError};
 use validation::params::*;
+use validation::state::*;
+use validation::result::ValidationError;
 use urls::*;
 use ::ResponseType;
 use config::Config;
+use oauth2::{ClientApplication, ClientApplicationRepo};
 
 
 #[derive(Clone, Debug)]
@@ -25,6 +28,10 @@ pub struct AuthorizeRequest {
     prompt: Option<String>,
     display: Option<String>,
     // other stuff: max_age, ui_locales, id_token_hint, login_hint, acr_values
+    
+    client: Option<ClientApplication>,
+    
+    validation_state: ValidationState,
 }
 
 
@@ -51,41 +58,61 @@ impl AuthorizeRequest {
             nonce: nonce.map(|s| s.to_owned()),
             response_mode: response_mode.map(|s| s.to_owned()),
             
+            client: None,
+            
+            validation_state: ValidationState::new(),
         })
+    }
+    
+    pub fn load_client(&mut self, client_repo: &ClientApplicationRepo) -> Result<()> {
+        self.client = try!(client_repo.find_client_application(&self.client_id));
+
+        Ok(())
     }
     
     pub fn has_scope(&self, scope: &str) -> bool {
         self.scopes.iter().find(|s| *s == scope).is_some()
     }
-}
-
-pub fn parse_authorize_request(config: &Config, req: &mut Request) -> Result<AuthorizeRequest> {
-    let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
     
-    //TODO validate supplied oauth2 params
-    
-    let auth_req = try!(AuthorizeRequest::from_params(hashmap));
-    
-    let openid_scope = "openid";
-    if !auth_req.has_scope(openid_scope) {
-        return Err(OpenIdConnectError::ScopeNotFound(Box::new(openid_scope.to_owned())))
+    pub fn validate(&mut self) -> Result<bool> {
+        self.validation_state = ValidationState::new();
+        
+        let openid_scope = "openid";
+        if !self.has_scope(openid_scope) {
+            self.validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));
+        }
+        
+        if let Some(ref client) = self.client {
+            if !client.match_redirect_uri(&self.redirect_uri) {
+                self.validation_state.reject("redirect_uri", ValidationError::InvalidValue("redirect_uri does not match".to_owned()));
+            }
+        } else {
+            self.validation_state.reject("client_id", ValidationError::InvalidValue("client not found for client_id".to_owned()));
+        }
+        
+        Ok(self.validation_state.valid)
     }
     
-    let maybe_client_app = try!(config.application_repo.find_client_application(&auth_req.client_id));
-    let client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
+    pub fn load_from_query(config: &Config, req: &mut Request) -> Result<AuthorizeRequest> {
+        let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
     
-    if !client_app.match_redirect_uri(&auth_req.redirect_uri) {
-        return Err(OpenIdConnectError::InvalidRedirectUri);
+        let mut auth_req = try!(AuthorizeRequest::from_params(hashmap));
+    
+        try!(auth_req.load_client(&**config.application_repo));
+    
+        if ! try!(auth_req.validate()) {
+            return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(auth_req.validation_state)));
+        }
+    
+        Ok(auth_req)
     }
-    
-    Ok(auth_req)
 }
 
 pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
     let mut params = HashMap::new();
     
     if authorize_request.state.is_some() {
-      params.insert("state".to_owned(), authorize_request.state.as_ref().unwrap().to_owned());
+        params.insert("state".to_owned(), authorize_request.state.as_ref().unwrap().to_owned());
     }
     
     params.insert("redirect_uri".to_owned(), authorize_request.redirect_uri.clone());
@@ -99,7 +126,7 @@ pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeReq
 /// otherwise redirect to redirect_uri with code or id_token depending on flow
 pub fn authorize_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/authorize");
-    let authorize_request = try!(parse_authorize_request(config, req));
+    let authorize_request = try!(AuthorizeRequest::load_from_query(config, req));
     debug!("authorize: {:?}", authorize_request);
     
     // TODO validate subject claim
