@@ -5,7 +5,7 @@ use vlad::result::VladError;
 use result::{Result, OpenIdConnectError};
 use authentication::*;
 
-use super::client::*;
+use super::super::models::client::*;
 
 pub trait ClientApplicationRepo where Self: Send + Sync {
     fn create_client_application(&self, ca: ClientApplicationBuilder) -> Result<ClientApplication>;

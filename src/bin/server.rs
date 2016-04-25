@@ -27,9 +27,7 @@ use logger::Logger;
 use logger::format::Format;
 use handlebars_iron::{HandlebarsEngine, DirectorySource};
 
-use openid_connect::routes::token::*;
 use openid_connect::routes::login::*;
-use openid_connect::routes::authorize::*;
 use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
 use openid_connect::routes::application_api::*;
