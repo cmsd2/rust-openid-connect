@@ -22,6 +22,7 @@ extern crate oven;
 extern crate cookie;
 extern crate persistent;
 extern crate plugin;
+extern crate frank_jwt;
 
 pub mod result;
 pub mod urls;
@@ -35,6 +36,8 @@ pub mod login;
 pub mod sessions;
 pub mod view;
 pub mod helpers;
+pub mod jwt;
+pub mod oauth2;
 
 use result::{Result, OpenIdConnectError};
 

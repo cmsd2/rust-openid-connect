@@ -110,7 +110,7 @@ pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Resp
         Ok(params) => {
             match LoginRequestBuilder::build_from_params(&params) {
                 Ok(login_request) => {
-                    // TODO these must be escaped to avoid cross-site-scripting
+                    // handlebars escapes these for us
                     view.data.insert("username".to_owned(), value::to_value(&login_request.username));
                     view.data.insert("password".to_owned(), value::to_value(&login_request.password));
                 }

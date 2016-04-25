@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use users::UserRepo;
-use client_application::ClientApplicationRepo;
+use oauth2::ClientApplicationRepo;
 use sessions::SessionController;
 
 #[derive(Clone)]

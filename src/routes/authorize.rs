@@ -93,6 +93,10 @@ pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeReq
     relative_url(req, path, Some(params))
 }
 
+/// login with cookie if possible
+/// if not logged in or reprompting for credentials redirect to login url
+/// otherwise if not got consent or reprompting for consent redirect to consent url
+/// otherwise redirect to redirect_uri with code or id_token depending on flow
 pub fn authorize_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/authorize");
     let authorize_request = try!(parse_authorize_request(config, req));

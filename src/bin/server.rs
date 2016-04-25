@@ -38,7 +38,7 @@ use openid_connect::routes::applications;
 use openid_connect::users::*;
 use openid_connect::config::*;
 use openid_connect::handlers::*;
-use openid_connect::client_application::*;
+use openid_connect::oauth2::*;
 use openid_connect::sessions;
 use openid_connect::login;
 

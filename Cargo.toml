@@ -25,6 +25,8 @@ cookie = "0.2.2"
 oven = "0.3.0"
 persistent = "0.1.0"
 plugin = "0.2.6"
+frank_jwt = "2.1.0"
+rust-crypto = "0.2.35"
 
 [dependencies.handlebars-iron]
 version = "0.15.0"

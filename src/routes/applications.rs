@@ -1,20 +1,14 @@
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
-use router::Router;
-use bodyparser;
 use urlencoded::UrlEncodedBody;
-use vlad::params;
-use vlad;
-use serde_json;
 use serde_json::value;
 
 use config::Config;
 use result::*;
-use client_application::*;
+use oauth2::*;
 use view::View;
 use helpers::*;
-use routes::application_api::*;
 use urls::relative_url;
 
 pub fn applications_index_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
@@ -69,7 +63,7 @@ pub fn applications_update_handler(config: &Config, req: &mut Request) -> IronRe
     
     let params = try!(req.get_ref::<UrlEncodedBody>().map_err(OpenIdConnectError::from));
     let mut builder = ClientApplicationBuilder::new();
-    builder.load_params(params);
+    try!(builder.load_params(params));
     
     let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
     let mut client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
