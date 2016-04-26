@@ -43,7 +43,7 @@ impl serde::de::Visitor for TokenTypeVisitor {
     {
         match &value[..] {
             "Bearer" => Ok(TokenType::Bearer),
-            _ => Err(serde::de::Error::custom("expect a string"))
+            _ => Err(serde::de::Error::custom("unexpected token_type"))
         }
     }
 }

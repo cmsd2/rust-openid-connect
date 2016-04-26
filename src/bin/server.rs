@@ -151,6 +151,8 @@ pub fn main() {
     router.post("/applications/:id/delete", web_handler(&config, applications::applications_delete_handler));*/
     
     router.post("/token", api_handler(&config, oauth2::token_post_handler));
+    router.get("/userinfo", api_handler(&config, oauth2::userinfo_get_handler));
+    router.get("/identity", api_handler(&config, oauth2::identity_get_handler));
     
     let mut api_router = Router::new();
     api_router.get("/session", api_handler(&config, session_get_handler));
@@ -162,14 +164,18 @@ pub fn main() {
     api_router.put("/applications/:id", api_handler(&config, applications_put_handler));
     api_router.delete("/applications/:id", api_handler(&config, applications_delete_handler));
     
+    let mut well_known_router = Router::new();
+    well_known_router.get("/openid-configuration", api_handler(&config, oauth2::openid_config_get_handler));
+    
     let mut mount = Mount::new();
     mount.mount("/", router);
+    mount.mount("/.well-known", well_known_router);
     mount.mount("/api", api_router);
-    mount.mount("/js", Static::new(Path::new("priv/js/")));
-    mount.mount("/css", Static::new(Path::new("priv/css")));
-    mount.mount("/images", Static::new(Path::new("priv/images")));
-    mount.mount("/favicon.ico", Static::new(Path::new("priv/favicon.ico")));
-    mount.mount("/robots.txt", Static::new(Path::new("priv/robots.txt")));
+    mount.mount("/js", Static::new(Path::new("web/priv/js/")));
+    mount.mount("/css", Static::new(Path::new("web/priv/css")));
+    mount.mount("/images", Static::new(Path::new("web/priv/images")));
+    mount.mount("/favicon.ico", Static::new(Path::new("web/priv/favicon.ico")));
+    mount.mount("/robots.txt", Static::new(Path::new("web/priv/robots.txt")));
     
     let mut chain = Chain::new(mount);
     chain.link_before(sessions_controller);
