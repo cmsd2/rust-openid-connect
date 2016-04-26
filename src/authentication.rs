@@ -38,3 +38,8 @@ pub fn new_secret() -> String {
     thread_rng().fill_bytes(&mut bytes);
     bytes.to_base64(base64::URL_SAFE)
 }
+
+//TODO probably want to do more than just generate random data
+pub fn new_nonce() -> String {
+    new_secret()
+}

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use iron::prelude::*;
 use iron::status;
 use urlencoded::UrlEncodedBody;
+use serde_json;
 
 use result::{Result, OpenIdConnectError};
 use config::Config;
@@ -11,35 +12,35 @@ use validation::result;
 use validation::result::ValidationError;
 use validation::state::*;
 use validation::builder::*;
+use oauth2::models::tokens::{Token, TokenType};
+use authentication;
+use jwt;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GrantType {
     AuthorizationCode,
+    ClientCredentials,
 }
 
 impl GrantType {
     pub fn from_str(s: &str) -> Result<GrantType> {
         match s {
             "authorization_code" => Ok(GrantType::AuthorizationCode),
+            "client_credentials" => Ok(GrantType::ClientCredentials),
             _ => Err(OpenIdConnectError::UnknownGrantType(Box::new(s.to_owned())))
         }
     }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub enum TokenType {
-    Bearer,
 }
 
 #[derive(Clone, Debug)]
 pub struct TokenRequest {
     grant_type: GrantType,
     code: Option<String>,
-    redirect_uri: String,
+    redirect_uri: Option<String>,
 }
 
 impl TokenRequest {
-    pub fn new(grant_type: GrantType, code: Option<String>, redirect_uri: String) -> TokenRequest {
+    pub fn new(grant_type: GrantType, code: Option<String>, redirect_uri: Option<String>) -> TokenRequest {
         TokenRequest {
             grant_type: grant_type,
             code: code,
@@ -76,7 +77,7 @@ impl TokenRequestBuilder {
                         .ok_or(OpenIdConnectError::from(ValidationError::MissingRequiredValue("grant_type".to_owned())))
                         .and_then(|gt| GrantType::from_str(&gt))),
                 code: self.code,
-                redirect_uri: try!(self.redirect_uri.ok_or(ValidationError::MissingRequiredValue("redirect_uri".to_owned())))
+                redirect_uri: self.redirect_uri,
             })
         } else {
             Err(OpenIdConnectError::from(result::ValidationError::ValidationError(self.validation_state)))
@@ -97,6 +98,10 @@ impl TokenRequestBuilder {
             if let Ok(grant_type) = GrantType::from_str(grant_type_str) {
                 if self.code.is_none() && grant_type == GrantType::AuthorizationCode {
                     self.validation_state.reject("code", result::ValidationError::MissingRequiredValue("code".to_owned()));
+                }
+                
+                if self.redirect_uri.is_none() && grant_type != GrantType::ClientCredentials {
+                    self.validation_state.reject("redirect_uri", result::ValidationError::MissingRequiredValue("redirect_uri".to_owned()));
                 }
             } else {
                 self.validation_state.reject("grant_type", result::ValidationError::InvalidValue("grant_type".to_owned()));
@@ -143,13 +148,29 @@ pub struct TokenErrorResponse;
 /// called by RP server
 /// exchange code for access_token, id_token and maybe refresh_token
 /// on error render error response
-pub fn token_post_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn token_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
     debug!("/token");
     
     let token_request = try!(TokenRequestBuilder::build_from_request(req));
-    
     debug!("token request: {:?}", token_request);
     
-    Ok(Response::with((status::Ok, "insert id_token here")))
+    //TODO move this all somewhere else 
+    let mut claims = HashMap::new();
+    claims.insert("iss".to_owned(), "http://localhost:3000".to_owned());
+    claims.insert("nonce".to_owned(), authentication::new_nonce());
+    
+    let id_token = Some(jwt::new_token(config, claims));
+    
+    let token = Token {
+        access_token: authentication::new_secret(),
+        token_type: TokenType::Bearer,
+        refresh_token: None,
+        expires_in: 3600,
+        id_token: id_token,
+    };
+    
+    debug!("token response: {:?}", token);
+    
+    Ok(Response::with((status::Ok, try!(serde_json::to_string(&token).map_err(OpenIdConnectError::from)))))
 }
 

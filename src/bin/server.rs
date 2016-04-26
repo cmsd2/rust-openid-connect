@@ -39,6 +39,7 @@ use openid_connect::oauth2;
 use openid_connect::sessions;
 use openid_connect::service;
 use openid_connect::login_manager;
+use openid_connect::result::OpenIdConnectError;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -47,10 +48,34 @@ static FORMAT: &'static str =
 struct ErrorRenderer;
 
 impl AfterMiddleware for ErrorRenderer {
+    /// render error as human readable error page
     fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
         debug!("{:?} caught in ErrorRecover AfterMiddleware.", &err);
         
         let new_body = format!("{}", err);
+        
+        Ok(err.response.set(new_body))
+    }
+}
+
+struct JsonErrorRenderer;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct ErrorView {
+    error: String,
+}
+
+impl AfterMiddleware for JsonErrorRenderer {
+    /// if accept header contains */* or application/json
+    /// then render error as json object
+    /// otherwise pass error
+    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
+        debug!("{:?} caught in ErrorRecover AfterMiddleware.", &err);
+        
+        let error_view = ErrorView { error: format!("{}", err) };
+        
+        // TODO render contents of error as json object instead of string
+        let new_body = try!(serde_json::to_string(&error_view).map_err(OpenIdConnectError::from));
         
         Ok(err.response.set(new_body))
     }
@@ -100,7 +125,11 @@ pub fn main() {
     fn api_handler<T>(config: &Config, route: T) -> Chain
     where T: MethodHandler<Config>
     {
-        Chain::new(bind(config.clone(), route))
+        let mut chain = Chain::new(bind(config.clone(), route));
+        
+        chain.link_after(JsonErrorRenderer);
+        
+        chain
     }
     
     

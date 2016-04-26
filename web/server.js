@@ -15,11 +15,13 @@ var proxiedRoutes = [
       '^/login',
       '^/register',
       '^/applications',
+      '^/identity',
       '^/$'
     ];
     
 var filter = function(path, req) {
   var i, len = proxiedRoutes.length;
+  console.log(req.method, path);
   for(i = 0; i < len; i++) {
     if(path.match(proxiedRoutes[i])) {
       return true;
