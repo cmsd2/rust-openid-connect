@@ -8,13 +8,15 @@ use serde_json;
 use result::{Result, OpenIdConnectError};
 use config::Config;
 use validation::params::*;
-use validation::result;
-use validation::result::ValidationError;
+use validation::result::*;
 use validation::state::*;
 use validation::builder::*;
 use oauth2::models::tokens::{Token, TokenType};
 use authentication;
-use jwt;
+use jsonwebtoken::*;
+use jsonwebtoken::jwt::*;
+use jsonwebtoken::signer::*;
+use jsonwebtoken::crypto::mac_signer::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GrantType {
@@ -80,7 +82,7 @@ impl TokenRequestBuilder {
                 redirect_uri: self.redirect_uri,
             })
         } else {
-            Err(OpenIdConnectError::from(result::ValidationError::ValidationError(self.validation_state)))
+            Err(OpenIdConnectError::from(ValidationError::ValidationError(self.validation_state)))
         }
     }
     
@@ -97,17 +99,17 @@ impl TokenRequestBuilder {
         if let Some(ref grant_type_str) = self.grant_type {
             if let Ok(grant_type) = GrantType::from_str(grant_type_str) {
                 if self.code.is_none() && grant_type == GrantType::AuthorizationCode {
-                    self.validation_state.reject("code", result::ValidationError::MissingRequiredValue("code".to_owned()));
+                    self.validation_state.reject("code", ValidationError::MissingRequiredValue("code".to_owned()));
                 }
                 
                 if self.redirect_uri.is_none() && grant_type != GrantType::ClientCredentials {
-                    self.validation_state.reject("redirect_uri", result::ValidationError::MissingRequiredValue("redirect_uri".to_owned()));
+                    self.validation_state.reject("redirect_uri", ValidationError::MissingRequiredValue("redirect_uri".to_owned()));
                 }
             } else {
-                self.validation_state.reject("grant_type", result::ValidationError::InvalidValue("grant_type".to_owned()));
+                self.validation_state.reject("grant_type", ValidationError::InvalidValue("grant_type".to_owned()));
             }
         } else {
-            self.validation_state.reject("grant_type", result::ValidationError::MissingRequiredValue("grant_type".to_owned()));
+            self.validation_state.reject("grant_type", ValidationError::MissingRequiredValue("grant_type".to_owned()));
         }
         
         Ok(self.validation_state.valid)
@@ -155,18 +157,20 @@ pub fn token_post_handler(config: &Config, req: &mut Request) -> IronResult<Resp
     debug!("token request: {:?}", token_request);
     
     //TODO move this all somewhere else 
-    let mut claims = HashMap::new();
-    claims.insert("iss".to_owned(), "http://localhost:3000".to_owned());
-    claims.insert("nonce".to_owned(), authentication::new_nonce());
+    let mut jwt = Jwt::new();
+    jwt.claims.set_value("iss", &"roidc");
+    jwt.claims.set_value("nonce", &authentication::new_nonce());
     
-    let id_token = Some(jwt::new_token(config, claims));
+    let signer = try!(MacSigner::new("secret").map_err(OpenIdConnectError::from));
+    
+    let id_token = try!(jwt.encode(&signer).map_err(OpenIdConnectError::from));
     
     let token = Token {
         access_token: authentication::new_secret(),
         token_type: TokenType::Bearer,
         refresh_token: None,
         expires_in: 3600,
-        id_token: id_token,
+        id_token: Some(id_token),
     };
     
     debug!("token response: {:?}", token);

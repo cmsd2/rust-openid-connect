@@ -10,6 +10,7 @@ use validation::params;
 use validation;
 use url;
 use persistent;
+use jsonwebtoken::result::*;
 
 quick_error! {
     #[derive(Debug)]
@@ -147,6 +148,13 @@ quick_error! {
         NoSessionLoaded {
             description("server didn't load user session")
             display("server didn't load user session")
+        }
+        
+        JwtError(e: JwtError) {
+            from()
+            description("jwt error")
+            display("jwt error: {}", e)
+            cause(e)
         }
     }
 }
