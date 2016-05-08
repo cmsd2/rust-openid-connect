@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
-use urlencoded::UrlEncodedQuery;
+use urlencoded::{UrlEncodedQuery, UrlEncodedBody};
 use serde_json::value;
 
 use validation::state::*;
@@ -14,6 +14,7 @@ use result::{Result, OpenIdConnectError};
 use urls::*;
 use config::Config;
 use view::View;
+use back;
 
 #[derive(Clone, Debug)]
 pub struct LoginRequest {
@@ -114,6 +115,8 @@ pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
     
     match req.get_ref::<UrlEncodedQuery>() {
         Ok(params) => {
+            view.data.insert("return".to_owned(), value::to_value(&try!(multimap_get_maybe_one(params, "return").map_err(OpenIdConnectError::from))));
+            
             match LoginRequestBuilder::build_from_params(&params) {
                 Ok(login_request) => {
                     // handlebars escapes these for us
@@ -145,13 +148,15 @@ pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
     let login_url = try!(relative_url(req, "/login", None));
     let home_url = try!(relative_url(req, "/", None));
     
+    let params = try!(req.get::<UrlEncodedBody>().map_err(OpenIdConnectError::from));
+    
     match config.session_controller.login(req) {
         Ok(login) => {
-            Ok(Response::with((status::Found, Redirect(home_url))).set(login.cookie()))
+            Ok(Response::with((status::Found, Redirect(try!(back::redirect_back(req, &params)).unwrap_or(home_url)))).set(login.cookie()))
         },
         Err(err) => {
             debug!("error logging in: {:?}", err);
-            Ok(Response::with((status::Found, Redirect(login_url))))
+            Ok(Response::with((status::Found, Redirect(try!(back::redirect_back(req, &params)).unwrap_or(login_url)))))
         }
     }
 }

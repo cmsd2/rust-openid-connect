@@ -156,6 +156,11 @@ quick_error! {
             display("jwt error: {}", e)
             cause(e)
         }
+        
+        RoutingError(msg: String) {
+            description("routing error")
+            display("routing error: {}", msg)
+        }
     }
 }
 

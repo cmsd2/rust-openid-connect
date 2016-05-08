@@ -6,6 +6,11 @@ use iron::status;
 use iron::modifiers::Redirect;
 use urlencoded::UrlEncodedQuery;
 
+use jsonwebtoken;
+use jsonwebtoken::signer::*;
+use jsonwebtoken::verifier::*;
+use jsonwebtoken::header::*;
+use jsonwebtoken::algorithm::*;
 use result::{Result, OpenIdConnectError};
 use validation::params::*;
 use validation::state::*;
@@ -29,14 +34,31 @@ pub struct AuthorizeRequest {
     display: Option<String>,
     // other stuff: max_age, ui_locales, id_token_hint, login_hint, acr_values
     
+    #[serde(skip_serializing, skip_deserializing)]
     client: Option<ClientApplication>,
     
-    #[serde(skip_serializing)] #[serde(skip_deserializing)]
+    #[serde(skip_serializing, skip_deserializing)]
     validation_state: ValidationState,
 }
 
 
 impl AuthorizeRequest {
+    pub fn new(response_type: ResponseType, client_id: String, redirect_uri: String) -> AuthorizeRequest {
+        AuthorizeRequest {
+            response_type: response_type,
+            scopes: vec![],
+            client_id: client_id,
+            state: None,
+            nonce: None,
+            redirect_uri: redirect_uri,
+            response_mode: None,
+            prompt: None,
+            display: None,
+            
+            client: None,
+            validation_state: ValidationState::default()
+        }
+    }
     pub fn from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
         let response_type = try!(multimap_get_one(hashmap, "response_type"));
         let scopes = try!(multimap_get(hashmap, "scope"));
@@ -98,8 +120,12 @@ impl AuthorizeRequest {
         let config = try!(Config::get(req));
         
         let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
-    
-        let mut auth_req = try!(AuthorizeRequest::from_params(hashmap));
+        
+        let mut auth_req = if let Some(jwt_req) = try!(multimap_get_maybe_one(hashmap, "jwt_req")) {
+            try!(AuthorizeRequest::decode(&jwt_req, &config.mac_signer))
+        } else {
+            try!(AuthorizeRequest::from_params(hashmap))
+        };
     
         try!(auth_req.load_client(&**config.application_repo));
     
@@ -109,18 +135,27 @@ impl AuthorizeRequest {
     
         Ok(auth_req)
     }
+    
+    pub fn encode<S: Signer>(&self, signer: &S) -> Result<String> {
+        let mut header = Header::new(Algorithm::HS256);
+        header.typ = Some("authorize".to_owned());
+        jsonwebtoken::encode(header, self, signer).map_err(OpenIdConnectError::from)
+    }
+    
+    pub fn decode<V: Verifier>(encoded: &str, verifier: &V) -> Result<AuthorizeRequest> {
+        let token_data = try!(jsonwebtoken::decode(encoded, verifier));
+        
+        Ok(token_data.claims)
+    }
 }
 
 pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
+    let config = try!(Config::get(req));
+    
     let mut params = HashMap::new();
     
-    if authorize_request.state.is_some() {
-        params.insert("state".to_owned(), authorize_request.state.as_ref().unwrap().to_owned());
-    }
-    
-    params.insert("client_id".to_owned(), authorize_request.client_id.clone());
-    params.insert("redirect_uri".to_owned(), authorize_request.redirect_uri.clone());
-    
+    params.insert("return".to_owned(), try!(authorize_request.encode(&config.mac_signer)));
+
     relative_url(req, path, Some(params))
 }
 
@@ -142,4 +177,34 @@ pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     let url = try!(login_url(req, "/login", &authorize_request));
     
     Ok(Response::with((status::Found, Redirect(url))))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use oauth2::models::client::*;
+    use serde_json;
+    use response_type::*;
+    
+    #[test]
+    fn test_client_app_is_not_serialised() {
+        let mut auth = AuthorizeRequest::new(ResponseType::new(false, false, false), "client_id#1234567".to_owned(), "redirect_uri#oob".to_owned());
+        auth.client = Some(ClientApplication::new("id#foo".to_owned(), Some("secret#bar".to_owned())));
+        
+        let s = serde_json::to_string(&auth).unwrap();
+        
+        assert!(s.find("1234567").is_some());
+        assert!(s.find("foo").is_none());
+        assert!(s.find("bar").is_none());
+    }
+    
+    #[test]
+    fn test_client_app_is_not_deserialised() {
+        let js = r#"{"response_type":"none", "client_id":"foo", "redirect_uri":"oob", "scopes": ["openid"], "client":{"client_id":"1234567","secret":"bar"}}"#;
+        
+        let auth = serde_json::from_str::<AuthorizeRequest>(js).unwrap();
+        
+        assert_eq!(auth.client_id, "foo");
+        assert!(auth.client.is_none());
+    }
 }

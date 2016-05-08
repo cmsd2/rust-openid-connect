@@ -29,7 +29,6 @@ pub mod urls;
 pub mod routes;
 pub mod authentication;
 pub mod users;
-pub mod client_application;
 pub mod config;
 pub mod handlers;
 pub mod login_manager;
@@ -39,6 +38,7 @@ pub mod helpers;
 pub mod oauth2;
 pub mod service;
 pub mod response_type;
+pub mod back;
 
 
 #[cfg(test)]

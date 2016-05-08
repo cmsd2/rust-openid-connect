@@ -12,6 +12,7 @@ extern crate handlebars_iron;
 extern crate staticfile;
 extern crate mount;
 extern crate persistent;
+extern crate jsonwebtoken;
 
 #[macro_use] extern crate log;
 extern crate env_logger;
@@ -29,6 +30,7 @@ use router::Router;
 use logger::Logger;
 use logger::format::Format;
 use handlebars_iron::{HandlebarsEngine, DirectorySource};
+use jsonwebtoken::crypto::mac_signer::MacSigner;
 
 use openid_connect::routes::home::*;
 use openid_connect::routes::register::*;
@@ -104,12 +106,13 @@ pub fn main() {
     application_repo.create_client_application(test_app).unwrap();
     
     let cookie_signing_key = b"My secret key"[..].to_owned();
+    let mac_signer = MacSigner::new("secret").unwrap();
     
     let sessions = Arc::new(Box::new(sessions::InMemorySessions::new(user_repo.clone())) as Box<sessions::Sessions>);
     let login_manager = login_manager::LoginManager::new(cookie_signing_key);
     let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
     
-    let config = Config::new(user_repo.clone(), application_repo.clone(), sessions_controller.clone());
+    let config = Config::new(mac_signer, user_repo.clone(), application_repo.clone(), sessions_controller.clone());
     
     // html content type;
     // html error pages
