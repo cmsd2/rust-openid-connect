@@ -11,6 +11,7 @@ extern crate urlencoded;
 extern crate handlebars_iron;
 extern crate staticfile;
 extern crate mount;
+extern crate persistent;
 
 #[macro_use] extern crate log;
 extern crate env_logger;
@@ -36,6 +37,7 @@ use openid_connect::users::*;
 use openid_connect::config::*;
 use openid_connect::handlers::*;
 use openid_connect::oauth2;
+use openid_connect::oauth2::routes::openid_config;
 use openid_connect::sessions;
 use openid_connect::service;
 use openid_connect::login_manager;
@@ -185,6 +187,9 @@ pub fn main() {
     outer_chain.link_before(logger_before);
     outer_chain.link_after(logger_after);
     outer_chain.link_after(ErrorRenderer);
+    
+    let woidc = openid_config::WellKnownOpenIdConfiguration::new();
+    outer_chain.link(persistent::Read::<openid_config::WellKnownOpenIdConfiguration>::both(woidc));
     
     Iron::new(outer_chain).http("0.0.0.0:8080").unwrap();
 }
