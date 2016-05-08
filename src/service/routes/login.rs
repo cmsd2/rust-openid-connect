@@ -107,7 +107,9 @@ pub fn parse_login_request(req: &mut Request) -> Result<LoginRequest> {
 /// if not logged in or reprompting for credentials, render login form
 /// otherwise redirect to caller
 /// on error set flash error and render login form
-pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let mut view = try!(View::new_for_session("login.html", req));
     
     match req.get_ref::<UrlEncodedQuery>() {
@@ -137,7 +139,9 @@ pub fn login_get_handler(_config: &Config, req: &mut Request) -> IronResult<Resp
 /// if not logged in, render login form with flash error
 /// otherwise redirect to caller
 /// on error, set flash error and render login form
-pub fn login_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let login_url = try!(relative_url(req, "/login", None));
     let home_url = try!(relative_url(req, "/", None));
     

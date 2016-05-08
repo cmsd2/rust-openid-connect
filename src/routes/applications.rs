@@ -11,7 +11,9 @@ use view::View;
 use helpers::*;
 use urls::relative_url;
 
-pub fn applications_index_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_index_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let apps_list = try!(config.application_repo.get_client_applications());
     
     let mut view = try!(View::new_for_session("applications/index.html", req));
@@ -21,13 +23,15 @@ pub fn applications_index_handler(config: &Config, req: &mut Request) -> IronRes
     Ok(Response::with((status::Ok, view.template())))
 }
 
-pub fn applications_new_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {  
+pub fn applications_new_handler(req: &mut Request) -> IronResult<Response> {  
     let view = try!(View::new_for_session("applications/new.html", req));
 
     Ok(Response::with((status::Ok, view.template())))
 }
 
-pub fn applications_show_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_show_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let ref client_id = try!(get_url_param(req, "id"));
     
     let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
@@ -42,7 +46,9 @@ pub fn applications_show_handler(config: &Config, req: &mut Request) -> IronResu
     Ok(Response::with((status::Ok, view.template())))
 }
 
-pub fn applications_edit_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_edit_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let ref client_id = try!(get_url_param(req, "id"));
     
     let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
@@ -57,7 +63,9 @@ pub fn applications_edit_handler(config: &Config, req: &mut Request) -> IronResu
     Ok(Response::with((status::Ok, view.template())))
 }
 
-pub fn applications_update_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_update_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let ref client_id = try!(get_url_param(req, "id"));
     let show_redirect_url = try!(relative_url(req, "/applications", None));
     
@@ -76,7 +84,9 @@ pub fn applications_update_handler(config: &Config, req: &mut Request) -> IronRe
     Ok(Response::with((status::Found, Redirect(show_redirect_url))))
 }
 
-pub fn applications_create_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_create_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let params = try!(req.get_ref::<UrlEncodedBody>().map_err(OpenIdConnectError::from)).clone();
     let mut builder = ClientApplicationBuilder::new();
     

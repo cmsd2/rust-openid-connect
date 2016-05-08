@@ -85,7 +85,7 @@ pub fn new_register_form() -> HashMap<String, String> {
     data
 }
 
-pub fn register_get_handler(_config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn register_get_handler(req: &mut Request) -> IronResult<Response> {
     let mut data = new_register_form();
     
     match req.get_ref::<UrlEncodedQuery>() {
@@ -113,7 +113,9 @@ pub fn register_get_handler(_config: &Config, req: &mut Request) -> IronResult<R
     Ok(Response::with((status::Ok, Template::new("_layout.html", data))))
 }
 
-pub fn register_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn register_post_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let register_url = try!(relative_url(req, "/register", None));
     let home_url =try!(relative_url(req, "/", None));
     

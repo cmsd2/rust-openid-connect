@@ -11,12 +11,12 @@ use validation::params::*;
 use validation::state::*;
 use validation::result::ValidationError;
 use urls::*;
-use ::ResponseType;
+use response_type::ResponseType;
 use config::Config;
 use oauth2::{ClientApplication, ClientApplicationRepo};
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthorizeRequest {
     response_type: ResponseType,
     scopes: Vec<String>, // required. must contain at least "openid" scope.
@@ -31,6 +31,7 @@ pub struct AuthorizeRequest {
     
     client: Option<ClientApplication>,
     
+    #[serde(skip_serializing)] #[serde(skip_deserializing)]
     validation_state: ValidationState,
 }
 
@@ -93,7 +94,9 @@ impl AuthorizeRequest {
         Ok(self.validation_state.valid)
     }
     
-    pub fn load_from_query(config: &Config, req: &mut Request) -> Result<AuthorizeRequest> {
+    pub fn load_from_query(req: &mut Request) -> Result<AuthorizeRequest> {
+        let config = try!(Config::get(req));
+        
         let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
     
         let mut auth_req = try!(AuthorizeRequest::from_params(hashmap));
@@ -115,6 +118,7 @@ pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeReq
         params.insert("state".to_owned(), authorize_request.state.as_ref().unwrap().to_owned());
     }
     
+    params.insert("client_id".to_owned(), authorize_request.client_id.clone());
     params.insert("redirect_uri".to_owned(), authorize_request.redirect_uri.clone());
     
     relative_url(req, path, Some(params))
@@ -126,9 +130,11 @@ pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeReq
 /// otherwise if not got consent or reprompting for consent redirect to consent url
 /// otherwise redirect to redirect_uri with code or id_token depending on flow
 /// on error either render error or return error response to RP via redirect
-pub fn authorize_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     debug!("/authorize");
-    let authorize_request = try!(AuthorizeRequest::load_from_query(config, req));
+    let authorize_request = try!(AuthorizeRequest::load_from_query(req));
     debug!("authorize: {:?}", authorize_request);
     
     // TODO validate subject claim

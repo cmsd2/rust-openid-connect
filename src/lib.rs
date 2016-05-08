@@ -38,35 +38,7 @@ pub mod view;
 pub mod helpers;
 pub mod oauth2;
 pub mod service;
-
-use result::{Result, OpenIdConnectError};
-
-/// Authorization Code flow: "code"
-/// Implicit flow: "id_token" or "id_token token"
-/// Hybrid flow: "code id_token" or "code token" or "code id_token token"
-#[derive(Copy, Clone, Debug)]
-pub struct ResponseType {
-    pub code: bool,
-    pub id_token: bool,
-    pub token: bool,
-}
-
-impl ResponseType {
-    pub fn new(code: bool, id_token: bool, token: bool) -> ResponseType {
-        ResponseType {
-            code: code,
-            id_token: id_token,
-            token: token,
-        }
-    }
-    
-    pub fn from_str(s: &str) -> Result<ResponseType> {
-        match s {
-            "code" => Ok(ResponseType::new(true, false, false)),
-            _ => Err(OpenIdConnectError::UnknownResponseType(Box::new(s.to_owned())))
-        }
-    }
-}
+pub mod response_type;
 
 
 #[cfg(test)]

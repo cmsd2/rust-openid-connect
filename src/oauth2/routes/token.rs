@@ -6,7 +6,6 @@ use urlencoded::UrlEncodedBody;
 use serde_json;
 
 use result::{Result, OpenIdConnectError};
-use config::Config;
 use validation::params::*;
 use validation::result::*;
 use validation::state::*;
@@ -150,7 +149,7 @@ pub struct TokenErrorResponse;
 /// called by RP server
 /// exchange code for access_token, id_token and maybe refresh_token
 /// on error render error response
-pub fn token_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn token_post_handler(req: &mut Request) -> IronResult<Response> {
     debug!("/token");
     
     let token_request = try!(TokenRequestBuilder::build_from_request(req));

@@ -25,7 +25,9 @@ pub fn serialize_session(session: &UserSession) -> Result<String> {
     Ok(json_str)
 }
 
-pub fn session_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn session_get_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let login = try!(config.session_controller.load_session(req));
     
     if login.session.is_some() {
@@ -41,7 +43,9 @@ pub fn session_get_handler(config: &Config, req: &mut Request) -> IronResult<Res
     }
 }
 
-pub fn session_post_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn session_post_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let creds = try!(parse_credentials(req));
     
     debug!("received credentials: {:?}", creds);
@@ -64,7 +68,9 @@ pub fn session_post_handler(config: &Config, req: &mut Request) -> IronResult<Re
     }      
 }
 
-pub fn session_delete_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn session_delete_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     try!(config.session_controller.clear_session(req));
     
     Ok(Response::with((status::Ok, "not implemented")))

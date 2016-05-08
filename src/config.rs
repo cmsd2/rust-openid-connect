@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
+use iron::prelude::*;
+use iron::typemap;
+use persistent;
+
 use users::UserRepo;
 use oauth2::ClientApplicationRepo;
 use sessions::SessionController;
+use result::*;
 
 #[derive(Clone)]
 pub struct Config
@@ -23,4 +28,12 @@ impl Config {
             session_controller: session_controller,
         }
     }
+    
+    pub fn get(req: &mut Request) -> Result<Arc<Config>> {
+        req.get::<persistent::Read<Config>>().map_err(OpenIdConnectError::from)
+    }
+}
+
+impl typemap::Key for Config {
+    type Value = Config;
 }

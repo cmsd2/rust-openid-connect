@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use iron::prelude::*;
 use iron::status;
 use iron::typemap;
@@ -43,6 +45,10 @@ impl WellKnownOpenIdConfiguration {
             code_challenge_methods_supported: vec![],
         }
     }
+    
+    pub fn get(req: &mut Request) -> Result<Arc<WellKnownOpenIdConfiguration>> {
+        req.get::<persistent::Read<WellKnownOpenIdConfiguration>>().map_err(OpenIdConnectError::from)
+    }
 }
 
 impl typemap::Key for WellKnownOpenIdConfiguration {
@@ -50,8 +56,8 @@ impl typemap::Key for WellKnownOpenIdConfiguration {
 }
 
 /// /.well-known/openid-configuration
-pub fn openid_config_get_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
-    let woidc = try!(req.get::<persistent::Read<WellKnownOpenIdConfiguration>>().map_err(OpenIdConnectError::from));
+pub fn openid_config_get_handler(req: &mut Request) -> IronResult<Response> {
+    let woidc = try!(WellKnownOpenIdConfiguration::get(req));
     
     let body = try!(serde_json::to_string(&woidc).map_err(OpenIdConnectError::from));
     

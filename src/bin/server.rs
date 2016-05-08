@@ -21,6 +21,8 @@ use std::path::Path;
 
 use iron::prelude::*;
 use iron::{AfterMiddleware};
+use iron::middleware::Handler;
+use iron::mime::Mime;
 use mount::Mount;
 use staticfile::Static;
 use router::Router;
@@ -38,6 +40,7 @@ use openid_connect::config::*;
 use openid_connect::handlers::*;
 use openid_connect::oauth2;
 use openid_connect::oauth2::routes::openid_config;
+use openid_connect::oauth2::models::client::*;
 use openid_connect::sessions;
 use openid_connect::service;
 use openid_connect::login_manager;
@@ -79,7 +82,9 @@ impl AfterMiddleware for JsonErrorRenderer {
         // TODO render contents of error as json object instead of string
         let new_body = try!(serde_json::to_string(&error_view).map_err(OpenIdConnectError::from));
         
-        Ok(err.response.set(new_body))
+        let content_type = "application/json".parse::<Mime>().unwrap();
+        
+        Ok(err.response.set(new_body).set(content_type))
     }
 }
 
@@ -92,6 +97,11 @@ pub fn main() {
     user_repo.add_user(User::new("1".to_owned(), "admin".to_owned(), Some("admin".to_owned()))).unwrap();
     
     let application_repo = Arc::new(Box::new(oauth2::InMemoryClientApplicationRepo::new()) as Box<oauth2::ClientApplicationRepo>);
+    let mut test_app = ClientApplicationBuilder::new();
+    test_app.name = Some("Wpv WebView Client".to_owned());
+    test_app.client_id = Some("wpf.webview.client".to_owned());
+    test_app.redirect_uris = Some(vec!["oob://localhost/wpf.webview.client".to_owned()]);
+    application_repo.create_client_application(test_app).unwrap();
     
     let cookie_signing_key = b"My secret key"[..].to_owned();
     
@@ -99,7 +109,7 @@ pub fn main() {
     let login_manager = login_manager::LoginManager::new(cookie_signing_key);
     let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
     
-    let config = Config::new(user_repo, application_repo, sessions_controller.clone());
+    let config = Config::new(user_repo.clone(), application_repo.clone(), sessions_controller.clone());
     
     // html content type;
     // html error pages
@@ -108,7 +118,7 @@ pub fn main() {
     // TODO move the hbse out to be reused
     // TODO macro syntax to wrap several routes similarly
     fn web_handler<T>(config: &Config, route: T) -> Chain
-    where T: MethodHandler<Config>
+    where T: Handler
     {
         let mut hbse = HandlebarsEngine::new();
         hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
@@ -116,7 +126,7 @@ pub fn main() {
             panic!("{:?}", r);
         }
   
-        let mut chain = Chain::new(bind(config.clone(), route));
+        let mut chain = Chain::new(route);
         chain.link_after(hbse);
         chain
     }
@@ -125,9 +135,9 @@ pub fn main() {
     // json error page
     // jwt validation
     fn api_handler<T>(config: &Config, route: T) -> Chain
-    where T: MethodHandler<Config>
+    where T: Handler
     {
-        let mut chain = Chain::new(bind(config.clone(), route));
+        let mut chain = Chain::new(route);
         
         chain.link_after(JsonErrorRenderer);
         
@@ -190,6 +200,8 @@ pub fn main() {
     
     let woidc = openid_config::WellKnownOpenIdConfiguration::new();
     outer_chain.link(persistent::Read::<openid_config::WellKnownOpenIdConfiguration>::both(woidc));
+    
+    outer_chain.link(persistent::Read::<Config>::both(config));
     
     Iron::new(outer_chain).http("0.0.0.0:8080").unwrap();
 }

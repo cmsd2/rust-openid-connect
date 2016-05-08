@@ -52,7 +52,9 @@ impl ClientApplicationView {
     }
 }
 
-pub fn applications_get_handler(config: &Config, _req: &mut Request) -> IronResult<Response> {
+pub fn applications_get_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let apps_list = ClientApplicationList::new(try!(config.application_repo.get_client_applications()));
     
     let apps_json = try!(serde_json::to_string(&apps_list).map_err(OpenIdConnectError::from));
@@ -68,7 +70,9 @@ pub fn read_client_application_body(req: &mut Request) -> Result<ClientApplicati
     serde_json::from_str(&json).map_err(OpenIdConnectError::from)
 }
 
-pub fn applications_post_handler(config: &Config, _req: &mut Request) -> IronResult<Response> {
+pub fn applications_post_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let ca = try!(config.application_repo.create_client_application(ClientApplicationBuilder::new()));
     
     let ca_json: String = try!(serde_json::to_string(&ca).map_err(OpenIdConnectError::from));
@@ -76,7 +80,9 @@ pub fn applications_post_handler(config: &Config, _req: &mut Request) -> IronRes
     Ok(Response::with((status::Ok, ca_json)))
 }
 
-pub fn applications_put_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_put_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let ref client_id = try!(get_url_param(req, "id"));
     
     let maybe_update = try!(req.get::<bodyparser::Struct<ClientApplicationUpdate>>().map_err(OpenIdConnectError::from));
@@ -94,7 +100,9 @@ pub fn applications_put_handler(config: &Config, req: &mut Request) -> IronResul
     Ok(Response::with((status::Ok, update_json)))
 }
 
-pub fn applications_delete_handler(config: &Config, req: &mut Request) -> IronResult<Response> {
+pub fn applications_delete_handler(req: &mut Request) -> IronResult<Response> {
+    let config = try!(Config::get(req));
+    
     let ref client_id = try!(get_url_param(req, "id"));
     
     try!(config.application_repo.remove_client_application(client_id));

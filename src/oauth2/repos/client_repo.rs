@@ -45,15 +45,19 @@ impl InMemoryClientApplicationRepo {
 
 impl ClientApplicationRepo for InMemoryClientApplicationRepo {
     fn get_client_applications(&self) -> Result<Vec<ClientApplication>> {
+        debug!("client_applications: select *");
+        
         let client_applications = self.client_applications.lock().unwrap();
         
         Ok(client_applications.clone())
     }
     
     fn create_client_application(&self, mut input: ClientApplicationBuilder) -> Result<ClientApplication> {
+        debug!("client_applications: create {:?}", input);
+        
         let mut client_applications = self.client_applications.lock().unwrap();
         
-        input.client_id = Some(new_client_id());
+        input.client_id = input.client_id.or_else(|| Some(new_client_id()));
         input.secret = Some(new_secret());
         input.hashed_secret = Some(hash_password(input.secret.as_ref().map(|s| &s[..]).unwrap_or("")));
         
@@ -73,12 +77,16 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
     }
     
     fn find_client_application(&self, client_id: &str) -> Result<Option<ClientApplication>> {
+        debug!("client_applications: find {}", client_id);
+        
         let client_applications = self.client_applications.lock().unwrap();
         
         Ok(Self::find_index(&client_applications, client_id).map(|i| client_applications[i].clone()))
     }
     
     fn update_client_application(&self, ca: &ClientApplication) -> Result<()> {
+        debug!("client_applications: update {:?}", ca);
+        
         let mut client_applications = self.client_applications.lock().unwrap();
         
         let index = try!(Self::get_index(&client_applications, &ca.client_id));
@@ -89,6 +97,8 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
     }
     
     fn remove_client_application(&self, client_id: &str) -> Result<()> {
+        debug!("client_applications: delete {}", client_id);
+        
         let mut client_applications = self.client_applications.lock().unwrap();
         
         let index = try!(Self::get_index(&client_applications, client_id));
