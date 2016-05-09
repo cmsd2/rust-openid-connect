@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use validation::result::ValidationError;
+use rbvt::result::ValidationError;
 
 use result::{Result, OpenIdConnectError};
 use authentication::*;

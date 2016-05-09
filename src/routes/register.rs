@@ -6,9 +6,9 @@ use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use handlebars_iron::Template;
 
-use validation::result::ValidationError;
-use validation::state::*;
-use validation::params::*;
+use rbvt::result::ValidationError;
+use rbvt::state::*;
+use rbvt::params::*;
 
 use result::{Result, OpenIdConnectError};
 use urls::*;

@@ -29,8 +29,10 @@ persistent = "0.1.0"
 plugin = "0.2.6"
 rust-crypto = "0.2.35"
 openssl = "0.7.11"
-rbvt = {path = "../rbvt"}
+rbvt = {git = "https://github.com/cmsd2/rbvt.git"}
 jsonwebtoken = {path = "../keats-rust-jwt"}
+chrono = "0.2.22"
+cast = "*"
 
 [dependencies.handlebars-iron]
 version = "0.15.0"

@@ -19,7 +19,7 @@ use urlencoded::*;
 use result::*;
 use login_manager::*;
 use users::*;
-use validation::params::*;
+use rbvt::params::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Credentials {

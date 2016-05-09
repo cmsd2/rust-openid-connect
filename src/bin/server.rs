@@ -105,6 +105,8 @@ pub fn main() {
     test_app.redirect_uris = Some(vec!["oob://localhost/wpf.webview.client".to_owned()]);
     application_repo.create_client_application(test_app).unwrap();
     
+    let grant_repo = Arc::new(Box::new(oauth2::InMemoryGrantRepo::new()) as Box<oauth2::GrantRepo>);
+    
     let cookie_signing_key = b"My secret key"[..].to_owned();
     let mac_signer = MacSigner::new("secret").unwrap();
     
@@ -112,7 +114,7 @@ pub fn main() {
     let login_manager = login_manager::LoginManager::new(cookie_signing_key);
     let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
     
-    let config = Config::new(mac_signer, user_repo.clone(), application_repo.clone(), sessions_controller.clone());
+    let config = Config::new(mac_signer, user_repo.clone(), application_repo.clone(), grant_repo.clone(), sessions_controller.clone());
     
     // html content type;
     // html error pages

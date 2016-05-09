@@ -14,9 +14,9 @@ use jsonwebtoken::verifier::*;
 use jsonwebtoken::header::*;
 use jsonwebtoken::algorithm::*;
 use result::{Result, OpenIdConnectError};
-use validation::params::*;
-use validation::state::*;
-use validation::result::ValidationError;
+use rbvt::params::*;
+use rbvt::state::*;
+use rbvt::result::ValidationError;
 use urls::*;
 use response_type::ResponseType;
 use config::Config;
@@ -40,8 +40,9 @@ pub struct AuthorizeRequest {
     #[serde(skip_serializing, skip_deserializing)]
     pub client: Option<ClientApplication>,
     
-    #[serde(skip_serializing, skip_deserializing)]
-    validation_state: ValidationState,
+    // #[serde(skip_serializing, skip_deserializing)]
+    // #[serde(skip_serializing)]
+    // validation_state: Option<ValidationState>,
 }
 
 
@@ -59,7 +60,7 @@ impl AuthorizeRequest {
             display: None,
             
             client: None,
-            validation_state: ValidationState::default()
+            // validation_state: ValidationState::default()
         }
     }
     pub fn from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
@@ -86,7 +87,7 @@ impl AuthorizeRequest {
             
             client: None,
             
-            validation_state: ValidationState::new(),
+            // validation_state: ValidationState::new(),
         })
     }
     
@@ -100,23 +101,23 @@ impl AuthorizeRequest {
         self.scopes.iter().find(|s| *s == scope).is_some()
     }
     
-    pub fn validate(&mut self) -> Result<bool> {
-        self.validation_state = ValidationState::new();
+    pub fn validate(&mut self, validation_state: &mut ValidationState) -> Result<bool> {
+        //self.validation_state = ValidationState::new();
         
         let openid_scope = "openid";
         if !self.has_scope(openid_scope) {
-            self.validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));
+            validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));
         }
         
         if let Some(ref client) = self.client {
             if !client.match_redirect_uri(&self.redirect_uri) {
-                self.validation_state.reject("redirect_uri", ValidationError::InvalidValue("redirect_uri does not match".to_owned()));
+                validation_state.reject("redirect_uri", ValidationError::InvalidValue("redirect_uri does not match".to_owned()));
             }
         } else {
-            self.validation_state.reject("client_id", ValidationError::InvalidValue("client not found for client_id".to_owned()));
+            validation_state.reject("client_id", ValidationError::InvalidValue("client not found for client_id".to_owned()));
         }
         
-        Ok(self.validation_state.valid)
+        Ok(validation_state.valid)
     }
     
     pub fn load_from_query(req: &mut Request) -> Result<AuthorizeRequest> {
@@ -132,8 +133,10 @@ impl AuthorizeRequest {
     
         try!(auth_req.load_client(&**config.application_repo));
     
-        if ! try!(auth_req.validate()) {
-            return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(auth_req.validation_state)));
+        let mut validation_state = ValidationState::new();
+        
+        if ! try!(auth_req.validate(&mut validation_state)) {
+            return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(validation_state)));
         }
     
         Ok(auth_req)

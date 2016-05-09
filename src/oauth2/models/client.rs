@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use serde::{Serializer, Deserializer};
-use validation::result::ValidationError;
-use validation::params::*;
-use validation::state::*;
+use rbvt::result::ValidationError;
+use rbvt::params::*;
+use rbvt::state::*;
 
 use result::Result;
 use authentication::*;

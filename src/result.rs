@@ -6,8 +6,8 @@ use iron::status;
 use urlencoded;
 use bodyparser;
 use serde_json;
-use validation::params;
-use validation;
+use rbvt::params;
+use rbvt;
 use url;
 use persistent;
 use jsonwebtoken::result::*;
@@ -93,7 +93,7 @@ quick_error! {
             display("Redirect uri is not recognised")
         }
         
-        ValidationError(err: validation::result::ValidationError) {
+        ValidationError(err: rbvt::result::ValidationError) {
             from()
             description("validation error")
             display("Validation error: {}", err)
@@ -160,6 +160,11 @@ quick_error! {
         RoutingError(msg: String) {
             description("routing error")
             display("routing error: {}", msg)
+        }
+        
+        GrantNotFound {
+            description("grant not found")
+            display("Grant not found")
         }
     }
 }

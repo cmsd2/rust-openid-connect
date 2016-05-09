@@ -1,7 +1,7 @@
 use iron::prelude::*;
 use router::Router;
 
-use validation::params;
+use rbvt::params;
 use result::Result;
 
 pub fn get_url_param(req: &mut Request, name: &str) -> Result<String> {

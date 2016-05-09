@@ -6,10 +6,10 @@ use urlencoded::UrlEncodedBody;
 use serde_json;
 
 use result::{Result, OpenIdConnectError};
-use validation::params::*;
-use validation::result::*;
-use validation::state::*;
-use validation::builder::*;
+use rbvt::params::*;
+use rbvt::result::*;
+use rbvt::state::*;
+use rbvt::builder::*;
 use oauth2::models::tokens::{Token, TokenType};
 use authentication;
 use jsonwebtoken::*;

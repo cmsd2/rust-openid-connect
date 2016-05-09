@@ -9,9 +9,9 @@ use urlencoded::*;
 use serde_json::value;
 use plugin::Plugin as PluginPlugin;
 
-use validation::state::*;
-use validation::result::ValidationError;
-use validation::params::*;
+use rbvt::state::*;
+use rbvt::result::ValidationError;
+use rbvt::params::*;
 use result::{Result, OpenIdConnectError};
 use urls::*;
 use config::Config;

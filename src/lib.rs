@@ -21,8 +21,10 @@ extern crate oven;
 extern crate cookie;
 extern crate persistent;
 extern crate plugin;
-extern crate rbvt as validation;
+extern crate rbvt;
 extern crate jsonwebtoken;
+extern crate chrono;
+extern crate cast;
 
 pub mod result;
 pub mod urls;
@@ -39,6 +41,7 @@ pub mod oauth2;
 pub mod service;
 pub mod response_type;
 pub mod back;
+pub mod serialisation;
 
 
 #[cfg(test)]
