@@ -26,19 +26,19 @@ use sessions::UserSession;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthorizeRequest {
-    response_type: ResponseType,
-    scopes: Vec<String>, // required. must contain at least "openid" scope.
-    client_id: String,
+    pub response_type: ResponseType,
+    pub scopes: Vec<String>, // required. must contain at least "openid" scope.
+    pub client_id: String,
     state: Option<String>, // recommended
     nonce: Option<String>, // optional in authorization code flow. required in implicit flow
-    redirect_uri: String, // or url type?
-    response_mode: Option<String>, // optional
-    prompt: Option<String>,
-    display: Option<String>,
+    pub redirect_uri: String, // or url type?
+    pub response_mode: Option<String>, // optional
+    pub prompt: Option<String>,
+    pub display: Option<String>,
     // other stuff: max_age, ui_locales, id_token_hint, login_hint, acr_values
     
     #[serde(skip_serializing, skip_deserializing)]
-    client: Option<ClientApplication>,
+    pub client: Option<ClientApplication>,
     
     #[serde(skip_serializing, skip_deserializing)]
     validation_state: ValidationState,
@@ -139,9 +139,9 @@ impl AuthorizeRequest {
         Ok(auth_req)
     }
     
-    pub fn encode<S: Signer>(&self, signer: &S) -> Result<String> {
+    pub fn encode<S: Signer>(&self, jwt_type: &str, signer: &S) -> Result<String> {
         let mut header = Header::new(Algorithm::HS256);
-        header.typ = Some("authorize".to_owned());
+        header.typ = Some(jwt_type.to_owned());
         jsonwebtoken::encode(header, self, signer).map_err(OpenIdConnectError::from)
     }
     
@@ -157,7 +157,7 @@ pub fn auth_redirect_url(req: &mut Request, path: &str, authorize_request: &Auth
     
     let mut params = HashMap::new();
     
-    params.insert("return".to_owned(), try!(authorize_request.encode(&config.mac_signer)));
+    params.insert("return".to_owned(), try!(authorize_request.encode("authorize", &config.mac_signer)));
 
     relative_url(req, path, Some(params))
 }

@@ -154,6 +154,8 @@ pub fn main() {
     router.get("/", web_handler(&config, home_handler));
     router.get("/login", web_handler(&config, service::login_get_handler));
     router.post("/login", web_handler(&config, service::login_post_handler));
+    router.get("/consent", web_handler(&config, service::consent_get_handler));
+    router.post("/consent", web_handler(&config, service::consent_post_handler));
     router.get("/register", web_handler(&config, register_get_handler));
     router.post("/register", web_handler(&config, register_post_handler));
     router.get("/applications", web_handler(&config, applications::applications_index_handler));

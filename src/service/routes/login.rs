@@ -150,10 +150,12 @@ pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
     let home_url = try!(relative_url(req, "/", None));
     
     let params = try!(match req.get::<UrlEncodedBody>() {
-        Ok(params) => Ok(Cow::Owned(params)),
-        Err(UrlDecodingError::EmptyQuery) => Ok(Cow::Owned(HashMap::new())),
+        Ok(params) => Ok(params),
+        Err(UrlDecodingError::EmptyQuery) => Ok(HashMap::new()),
         Err(e) => Err(e)
     }.map_err(OpenIdConnectError::from));
+    
+    // TODO handle cancel button
     
     match config.session_controller.login_with_credentials(req) {
         Ok(login) => {
