@@ -1,10 +1,11 @@
 use std::io::Read;
 use std::collections::HashMap;
+use std::borrow::Cow;
 
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
-use urlencoded::{UrlEncodedQuery, UrlEncodedBody};
+use urlencoded::*;
 use serde_json::value;
 
 use validation::state::*;
@@ -148,9 +149,13 @@ pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
     let login_url = try!(relative_url(req, "/login", None));
     let home_url = try!(relative_url(req, "/", None));
     
-    let params = try!(req.get::<UrlEncodedBody>().map_err(OpenIdConnectError::from));
+    let params = try!(match req.get::<UrlEncodedBody>() {
+        Ok(params) => Ok(Cow::Owned(params)),
+        Err(UrlDecodingError::EmptyQuery) => Ok(Cow::Owned(HashMap::new())),
+        Err(e) => Err(e)
+    }.map_err(OpenIdConnectError::from));
     
-    match config.session_controller.login(req) {
+    match config.session_controller.login_with_credentials(req) {
         Ok(login) => {
             Ok(Response::with((status::Found, Redirect(try!(back::redirect_back(req, &params)).unwrap_or(home_url)))).set(login.cookie()))
         },

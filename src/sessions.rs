@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::collections::HashMap;
+use std::borrow::Cow;
 use rand;
 use rand::Rng;
 
@@ -13,7 +14,7 @@ use oven::prelude::*;
 use persistent;
 use plugin;
 use plugin::Extensible;
-use urlencoded::UrlEncodedBody;
+use urlencoded::*;
 
 use result::*;
 use login_manager::*;
@@ -37,25 +38,36 @@ impl Credentials {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserSession {
-    username: String,
-    user_id: String,
-    session_id: String,
-    authenticated: bool,
+    pub username: Option<String>,
+    pub user_id: Option<String>,
+    pub session_id: Option<String>,
+    pub authenticated: bool,
 }
 
 impl UserSession {
     pub fn new(user_id: String, username: String, session_id: String) -> UserSession {
         UserSession {
-            username: username,
-            user_id: user_id,
-            session_id: session_id,
+            username: Some(username),
+            user_id: Some(user_id),
+            session_id: Some(session_id),
             authenticated: false,
         }
     }
 }
 
+impl Default for UserSession {
+    fn default() -> UserSession {
+        UserSession {
+            username: None,
+            user_id: None,
+            session_id: None,
+            authenticated: false
+        }
+    }
+}
+
 impl LoginSession for UserSession {
-    fn get_id(&self) -> String {
+    fn get_id(&self) -> Option<String> {
         self.session_id.clone()
     }
 }
@@ -115,7 +127,8 @@ impl Sessions for InMemorySessions {
                 session.authenticated = true;
                 
                 let mut sessions = self.sessions.lock().unwrap();
-                sessions.insert(session.session_id.clone(), session.clone());
+                let session_id = try!(session.session_id.as_ref().ok_or(OpenIdConnectError::InvalidUsernameOrPassword)).to_owned();
+                sessions.insert(session_id, session.clone());
                 
                 Ok(session)
             } else {
@@ -169,7 +182,7 @@ impl SessionController {
         Ok(session)
     }
 
-    pub fn load_session(&self, req: &mut Request) -> Result<Login<UserSession>> {
+    pub fn load_session(&self, req: &mut Request) -> Result<Option<UserSession>> {
         debug!("loading session");
         let config_arc = try!(req.get::<persistent::Read<LoginConfig>>());
         let config = (*config_arc).clone();
@@ -181,7 +194,7 @@ impl SessionController {
             None
         };
         
-        Ok(Login::new(&config, session))
+        Ok(session)
     }
     
     pub fn clear_session(&self, req: &mut Request) -> Result<bool> {
@@ -193,30 +206,58 @@ impl SessionController {
         }
     }
     
-    pub fn login(&self, req: &mut Request) -> Result<Login<UserSession>> {
-        let login_config = try!(req.get::<persistent::Read<LoginConfig>>()).clone();
-        let params = try!(req.get_ref::<UrlEncodedBody>());
-
-        debug!("logging in with creds {:?}", params);
-        // TODO validate csrf
-        // TODO validate credentials
-        // TODO create session and set cookie
+    /// Login with credentials if provided.
+    /// Separate from default login flow: only /login should all this.
+    pub fn login_with_credentials(&self, req: &mut Request) -> Result<Login<UserSession>> {
+        debug!("logging in with credentials");
         
-        let username = try!(multimap_get_maybe_one(params, "username").map_err(|e| {
+        let login_config = try!(LoginConfig::get_config(req));
+        
+        let params = try!(match req.get_ref::<UrlEncodedBody>() {
+            Ok(params) => Ok(Cow::Borrowed(params)),
+            Err(UrlDecodingError::EmptyQuery) => Ok(Cow::Owned(HashMap::new())),
+            Err(e) => Err(e),
+        });
+        
+        // TODO validate csrf
+        
+        let username = try!(multimap_get_maybe_one(&params, "username").map_err(|e| {
             debug!("error reading username: {:?}", e);
             OpenIdConnectError::InvalidUsernameOrPassword
-        })).unwrap_or("");
+        }));
         
-        let password = try!(multimap_get_maybe_one(params, "password").map_err(|e| {
+        let password = try!(multimap_get_maybe_one(&params, "password").map_err(|e| {
             debug!("error reading password: {:?}", e);
             OpenIdConnectError::InvalidUsernameOrPassword
-        })).unwrap_or("");
+        }));
         
-        let creds = Credentials::new(username, password);
+        let session = if username.is_some() || password.is_some() {
+            let creds = Credentials::new(username.unwrap_or(""), password.unwrap_or(""));
+            
+            let session = try!(self.sessions.authenticate(&creds));
+            
+            Some(session)
+        } else {
+            None
+        };
         
-        let session = try!(self.sessions.authenticate(&creds));
+        debug!("session: {:?}", session);
 
-        let login_modifier = Login::new(&login_config, Some(session));
+        let login_modifier = Login::new(&login_config, session);
+
+        Ok(login_modifier)
+    }
+    
+    /// Login with cookie if possible
+    /// otherwise leave session blank
+    pub fn login(&self, req: &mut Request) -> Result<Login<UserSession>> {
+
+        let session = try!(self.load_session(req));
+        
+        debug!("session: {:?}", session);
+
+        let login_config = try!(LoginConfig::get_config(req));
+        let login_modifier = Login::new(&login_config, session);
 
         Ok(login_modifier)
     }
@@ -224,7 +265,7 @@ impl SessionController {
 
 impl BeforeMiddleware for SessionController {
     fn before(&self, req: &mut Request) -> IronResult<()> {
-        match self.load_session(req) {
+        match self.login(req) {
             Ok(login) => {
                 debug!("injecting session into middleware chain {:?}", login);
                 req.extensions_mut().insert::<UserSession>(login.session);

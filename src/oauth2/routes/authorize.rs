@@ -4,6 +4,8 @@ use iron;
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
+use plugin::{Extensible, Pluggable};
+use plugin::Plugin as PluginPlugin;
 use urlencoded::UrlEncodedQuery;
 
 use jsonwebtoken;
@@ -19,6 +21,7 @@ use urls::*;
 use response_type::ResponseType;
 use config::Config;
 use oauth2::{ClientApplication, ClientApplicationRepo};
+use sessions::UserSession;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -149,7 +152,7 @@ impl AuthorizeRequest {
     }
 }
 
-pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
+pub fn auth_redirect_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
     let config = try!(Config::get(req));
     
     let mut params = HashMap::new();
@@ -157,6 +160,14 @@ pub fn login_url(req: &mut Request, path: &str, authorize_request: &AuthorizeReq
     params.insert("return".to_owned(), try!(authorize_request.encode(&config.mac_signer)));
 
     relative_url(req, path, Some(params))
+}
+
+pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
+    unimplemented!()
+}
+
+pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
+    true
 }
 
 /// called by user agent on behalf of RP
@@ -172,11 +183,22 @@ pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     let authorize_request = try!(AuthorizeRequest::load_from_query(req));
     debug!("authorize: {:?}", authorize_request);
     
-    // TODO validate subject claim
-    // TODO create session and set cookie
-    let url = try!(login_url(req, "/login", &authorize_request));
+    let session = try!(UserSession::eval(req));
+    let authenticated = session.map(|s| s.authenticated).unwrap_or(false);
     
-    Ok(Response::with((status::Found, Redirect(url))))
+    if !authenticated {
+        let url = try!(auth_redirect_url(req, "/login", &authorize_request));
+    
+        Ok(Response::with((status::Found, Redirect(url))))
+    } else if should_prompt(&authorize_request) {
+        let consent_url = try!(auth_redirect_url(req, "/consent", &authorize_request));
+        
+        Ok(Response::with((status::Found, Redirect(consent_url))))
+    } else {
+        let complete_url = try!(auth_complete_url(req, &authorize_request));
+        
+        Ok(Response::with((status::Found, Redirect(complete_url))))
+    }
 }
 
 #[cfg(test)]

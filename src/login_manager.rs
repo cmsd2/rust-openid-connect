@@ -8,6 +8,7 @@ use oven;
 use oven::prelude::*;
 use persistent;
 use cookie::Cookie;
+use result::Result;
 
 #[derive(Clone)]
 pub struct LoginManager {
@@ -47,6 +48,12 @@ impl LoginConfig {
             },
         }
     }
+    
+    pub fn get_config(req: &mut Request) -> Result<LoginConfig> {
+        let login_config = (*try!(req.get::<persistent::Read<LoginConfig>>())).clone();
+        
+        Ok(login_config)
+    }
 }
 
 impl Key for LoginConfig { type Value = LoginConfig; }
@@ -70,7 +77,7 @@ impl <U: LoginSession> modifier::Modifier<Response> for LoginModifier<U> {
     fn modify(self, response: &mut Response) {
         response.set_cookie({
             let mut x = self.login.config.cookie_base.clone();
-            x.value = self.login.session.map_or_else(|| "".to_owned(), |u| u.get_id());
+            x.value = self.login.session.map_or_else(|| "".to_owned(), |u| u.get_id().unwrap_or(String::new()));
             x
         });
     }
@@ -98,5 +105,5 @@ impl <U: LoginSession> Login<U> {
 }
 
 pub trait LoginSession: Clone + Send + Sync + Sized {
-    fn get_id(&self) -> String;
+    fn get_id(&self) -> Option<String>;
 }

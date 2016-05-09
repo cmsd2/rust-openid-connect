@@ -28,7 +28,7 @@ pub fn serialize_session(session: &UserSession) -> Result<String> {
 pub fn session_get_handler(req: &mut Request) -> IronResult<Response> {
     let config = try!(Config::get(req));
     
-    let login = try!(config.session_controller.load_session(req));
+    let login = try!(config.session_controller.login(req));
     
     if login.session.is_some() {
         let session_json = try!(serialize_session(&login.session.unwrap()));
@@ -50,6 +50,7 @@ pub fn session_post_handler(req: &mut Request) -> IronResult<Response> {
     
     debug!("received credentials: {:?}", creds);
     
+    // TODO use generic session_controller.login
     match config.session_controller.sessions.authenticate(&creds) {
         Ok(session) => {
             let session_json = try!(serialize_session(&session));
