@@ -15,7 +15,7 @@ use result::{Result, OpenIdConnectError};
 use urls::*;
 use config::Config;
 use view::View;
-use back;
+use back::*;
 
 #[derive(Clone, Debug)]
 pub struct LoginRequest {
@@ -159,11 +159,11 @@ pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
     
     match config.session_controller.login_with_credentials(req) {
         Ok(login) => {
-            Ok(Response::with((status::Found, Redirect(try!(back::redirect_back(req, &params)).unwrap_or(home_url)))).set(login.cookie()))
+            Ok(Response::with((status::Found, Redirect(try!(redirect_back_url(req, &params)).unwrap_or(home_url)))).set(login.cookie()))
         },
         Err(err) => {
             debug!("error logging in: {:?}", err);
-            Ok(Response::with((status::Found, Redirect(try!(back::redirect_back(req, &params)).unwrap_or(login_url)))))
+            Ok(Response::with((status::Found, Redirect(try!(redirect_back_url(req, &params)).unwrap_or(login_url)))))
         }
     }
 }

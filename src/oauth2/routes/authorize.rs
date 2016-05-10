@@ -13,6 +13,7 @@ use jsonwebtoken::signer::*;
 use jsonwebtoken::verifier::*;
 use jsonwebtoken::header::*;
 use jsonwebtoken::algorithm::*;
+use back::*;
 use result::{Result, OpenIdConnectError};
 use rbvt::params::*;
 use rbvt::state::*;
@@ -63,6 +64,31 @@ impl AuthorizeRequest {
             // validation_state: ValidationState::default()
         }
     }
+    
+    pub fn to_params(&self) -> HashMap<String, Vec<String>> {
+        let mut params = HashMap::new();
+        params.insert("response_type".to_owned(), vec![self.response_type.to_string()]);
+        params.insert("scope".to_owned(), self.scopes.clone());
+        params.insert("client_id".to_owned(), vec![self.client_id.clone()]);
+        if self.state.is_some() {
+            params.insert("state".to_owned(), vec![self.state.as_ref().unwrap().to_owned()]);
+        }
+        if self.nonce.is_some() {
+            params.insert("nonce".to_owned(), vec![self.nonce.as_ref().unwrap().to_owned()]);
+        }
+        params.insert("redirect_uri".to_owned(), vec![self.redirect_uri.clone()]);
+        if self.response_mode.is_some() {
+            params.insert("response_mode".to_owned(), vec![self.response_mode.as_ref().unwrap().to_owned()]);
+        }
+        if self.prompt.is_some() {
+            params.insert("prompt".to_owned(), vec![self.prompt.as_ref().unwrap().to_owned()]);
+        }
+        if self.display.is_some() {
+            params.insert("display".to_owned(), vec![self.display.as_ref().unwrap().to_owned()]);
+        }
+        params
+    }
+    
     pub fn from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
         let response_type = try!(multimap_get_one(hashmap, "response_type"));
         let scopes = try!(multimap_get(hashmap, "scope"));
@@ -121,9 +147,13 @@ impl AuthorizeRequest {
     }
     
     pub fn load_from_query(req: &mut Request) -> Result<AuthorizeRequest> {
-        let config = try!(Config::get(req));
+        let hashmap = try!(req.get::<UrlEncodedQuery>());
         
-        let hashmap = try!(req.get_ref::<UrlEncodedQuery>());
+        Self::load_from_params(req, &hashmap)
+    }
+    
+    pub fn load_from_params(req: &mut Request, hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
+        let config = try!(Config::get(req));
         
         let mut auth_req = if let Some(jwt_req) = try!(multimap_get_maybe_one(hashmap, "jwt_req")) {
             try!(AuthorizeRequest::decode(&jwt_req, &config.mac_signer))
@@ -156,13 +186,13 @@ impl AuthorizeRequest {
 }
 
 pub fn auth_redirect_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    let config = try!(Config::get(req));
-    
-    let mut params = HashMap::new();
-    
-    params.insert("return".to_owned(), try!(authorize_request.encode("authorize", &config.mac_signer)));
+    redirect_forwards_url(req, "/authorize", path, authorize_request.to_params())
+}
 
-    relative_url(req, path, Some(params))
+pub fn auth_consent_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
+    let path = "/consent";
+    
+    relative_url(req, path, Some(authorize_request.to_params()))
 }
 
 pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
@@ -194,7 +224,7 @@ pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     
         Ok(Response::with((status::Found, Redirect(url))))
     } else if should_prompt(&authorize_request) {
-        let consent_url = try!(auth_redirect_url(req, "/consent", &authorize_request));
+        let consent_url = try!(auth_consent_url(req, &authorize_request));
         
         Ok(Response::with((status::Found, Redirect(consent_url))))
     } else {

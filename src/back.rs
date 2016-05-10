@@ -19,7 +19,7 @@ pub type RedirectToken = Jwt;
 
 pub trait RedirectTokenConstructors {
     fn new_for_path(path: &str) -> RedirectToken;
-    fn new_for_path_and_params(path: &str, params: &HashMap<String, String>) -> RedirectToken;
+    fn new_for_path_and_params(path: &str, params: &HashMap<String, Vec<String>>) -> RedirectToken;
 }
 
 impl RedirectTokenConstructors for RedirectToken {
@@ -35,7 +35,7 @@ impl RedirectTokenConstructors for RedirectToken {
         t
     }
     
-    fn new_for_path_and_params(path: &str, params: &HashMap<String, String>) -> RedirectToken {
+    fn new_for_path_and_params(path: &str, params: &HashMap<String, Vec<String>>) -> RedirectToken {
         let mut t = Self::new_for_path(path);
         
         t.claims.set_value("params", params);
@@ -44,25 +44,47 @@ impl RedirectTokenConstructors for RedirectToken {
     }
 }
 
-pub fn redirect_back(req: &mut Request, params: &HashMap<String, Vec<String>>) -> Result<Option<iron::Url>> {
+pub fn redirect_forwards_url(req: &mut Request, return_path: &str, redirect_path: &str, return_payload: HashMap<String, Vec<String>>) -> Result<iron::Url> {
     let config = try!(Config::get(req));
-    let return_str = try!(multimap_get_maybe_one(params, "return"));
+    
+    let mut params = HashMap::new();
+    
+    let redirect_token = RedirectToken::new_for_path_and_params(return_path, &return_payload);
+    
+    params.insert("return".to_owned(), vec![try!(redirect_token.encode(&config.mac_signer))]);
+
+    relative_url(req, redirect_path, Some(params))
+}
+
+pub fn load_token(req: &mut Request, params: &HashMap<String, Vec<String>>, token_param_name: &str) -> Result<Option<Jwt>> {
+    let config = try!(Config::get(req));
+    let return_str = try!(multimap_get_maybe_one(params, token_param_name));
     
     if let Some(return_str) = return_str {
         let token = try!(Jwt::decode(&return_str, &config.mac_signer));
         
+        let mut v = claims_verifier::<JwtClaims>();
+        let valid = try!(v.validate(&token.claims));
+        if valid {
+            Ok(Some(token))
+        } else {
+            Err(OpenIdConnectError::RoutingError(format!("token is not valid: {:?}", v.state)))
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn redirect_back_url(req: &mut Request, params: &HashMap<String, Vec<String>>) -> Result<Option<iron::Url>> {
+    if let Some(token) = try!(load_token(req, params, "return")) {
+    
         match token.header.typ.as_ref().map(|s| &s[..]) {
-            Some("authorize") => Ok(Some(try!(relative_url(req, "/authorize", Some(return_params(&return_str)))).to_owned())),
             Some("redirect") => {
-                let mut v = claims_verifier::<JwtClaims>();
-                let valid = try!(v.validate(&token.claims));
-                if valid {
-                    let params = try!(token.claims.get_value::<HashMap<String, String>>("params"));
-                    
-                    Ok(Some(try!(relative_url(req, "/authorize", params)) ))
-                } else {
-                    Err(OpenIdConnectError::RoutingError(format!("redirect token is not valid: {:?}", v.state)))
-                }
+                let params = try!(token.claims.get_value::<HashMap<String, Vec<String>>>("params"));
+                let maybe_path = try!(token.claims.get_value::<String>("path"));
+                let path = try!(maybe_path.ok_or(OpenIdConnectError::RoutingError("redirect path not supplied in token claims".to_owned())));
+        
+                Ok(Some(try!(relative_url(req, &path, params)) ))
             },
             Some(other) => Err(OpenIdConnectError::RoutingError(format!("no route for {}", other))),
             None => Err(OpenIdConnectError::RoutingError(format!("can't route unknown token"))),
