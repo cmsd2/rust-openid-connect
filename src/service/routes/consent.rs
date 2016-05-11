@@ -21,6 +21,8 @@ use view::View;
 use back::*;
 use sessions::UserSession;
 use oauth2::routes::authorize::{AuthorizeRequest, auth_redirect_url};
+use oauth2::models::*;
+use oauth2::repos::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Permission {
@@ -88,7 +90,7 @@ pub fn consent_get_handler(req: &mut Request) -> IronResult<Response> {
 pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     let config = try!(Config::get(req));
     let session = try!(UserSession::eval(req));
-    let authenticated = session.map(|s| s.authenticated).unwrap_or(false);  
+    let authenticated = session.as_ref().map(|s| s.authenticated).unwrap_or(false);  
     let home_url = try!(relative_url(req, "/", None));
     let params = try!(req.get::<UrlEncodedBody>().map_err(OpenIdConnectError::from));
     let maybe_return_token = try!(load_token(req, &params, "return").map_err(OpenIdConnectError::from));
@@ -107,6 +109,11 @@ pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     }
     
     // TODO save granted permissions
+    let user_session = try!(session.ok_or(OpenIdConnectError::NoSessionLoaded));
+    let user_id = try!(user_session.user_id.ok_or(OpenIdConnectError::UserNotFound));
+    let mut update = GrantUpdate::new(user_id, authorize_request.client_id.clone());
+    update.permissions_added = multimap_get_maybe(&params, "permissions").map(|p| p.clone()).unwrap_or(vec![]);
+    config.grant_repo.create_or_update_grant(update);
         
     authorize_request.step = Some("complete".to_owned());
     

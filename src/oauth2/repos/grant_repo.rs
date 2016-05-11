@@ -11,7 +11,7 @@ use super::super::models::grant::*;
 pub trait GrantRepo where Self: Send + Sync {
     fn get_user_grants(&self, user_id: &str) -> Result<Vec<Grant>>;
     
-    fn create_or_update_grant(&self, ca: Grant) -> Result<Grant>;
+    fn create_or_update_grant(&self, ca: GrantUpdate) -> Result<Grant>;
       
     fn find_grant(&self, user_id: &str, client_id: &str) -> Result<Option<Grant>>;
     
@@ -53,25 +53,18 @@ impl GrantRepo for InMemoryGrantRepo {
         Ok(grants.iter().filter(|g| g.user_id == user_id).map(|g| g.clone()).collect())
     }
     
-    fn create_or_update_grant(&self, mut input: Grant) -> Result<Grant> {
+    fn create_or_update_grant(&self, mut input: GrantUpdate) -> Result<Grant> {
         debug!("grant: create {:?}", input);
         
         let mut grants = self.grants.lock().unwrap();
         
-        let now = UTC::now();
-        input.created_at = now;
-        input.modified_at = now;
-        input.accessed_at = now;
-        
         if let Some(index) = Self::find_index(&grants, &input.user_id, &input.client_id) {
-            input.created_at = grants[index].created_at;
-            
-            grants[index] = input.clone();
+            grants[index].update(input);
+            Ok(grants[index].clone())
         } else {
-            grants.push(input.clone());
+            grants.push(Grant::new_for_update(input));
+            Ok(grants[grants.len() -1].clone())
         }
-        
-        Ok(input)
     }
     
     fn find_grant(&self, user_id: &str, client_id: &str) -> Result<Option<Grant>> {
