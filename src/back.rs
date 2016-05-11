@@ -94,10 +94,10 @@ pub fn redirect_back_url(req: &mut Request, params: &HashMap<String, Vec<String>
     }
 }
 
-pub fn return_params(return_state: &str) -> HashMap<String, String> {
+pub fn return_params<S: Into<String>>(return_state: S) -> HashMap<String, Vec<String>> {
     let mut params = HashMap::new();
     
-    params.insert("jwt_req".to_owned(), return_state.to_owned());
+    params.insert("jwt_req".to_owned(), vec![return_state.into()]);
     
     params
 }

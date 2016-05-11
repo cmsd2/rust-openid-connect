@@ -38,6 +38,8 @@ pub struct AuthorizeRequest {
     pub display: Option<String>,
     // other stuff: max_age, ui_locales, id_token_hint, login_hint, acr_values
     
+    pub step: Option<String>, // internal use. only loaded via signed params. for linking between /authorize and /consent
+    
     #[serde(skip_serializing, skip_deserializing)]
     pub client: Option<ClientApplication>,
     
@@ -59,6 +61,8 @@ impl AuthorizeRequest {
             response_mode: None,
             prompt: None,
             display: None,
+            
+            step: None,
             
             client: None,
             // validation_state: ValidationState::default()
@@ -86,6 +90,7 @@ impl AuthorizeRequest {
         if self.display.is_some() {
             params.insert("display".to_owned(), vec![self.display.as_ref().unwrap().to_owned()]);
         }
+
         params
     }
     
@@ -110,6 +115,8 @@ impl AuthorizeRequest {
             display: display.map(|s| s.to_owned()),
             nonce: nonce.map(|s| s.to_owned()),
             response_mode: response_mode.map(|s| s.to_owned()),
+            
+            step: None,
             
             client: None,
             
@@ -200,6 +207,17 @@ pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest
 }
 
 pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
+    if authorize_request.step.as_ref().map(|s| &s[..]).unwrap_or("") == "complete" {
+        return false;
+    }
+    
+    // TODO match boolean truthy strings?
+    if authorize_request.prompt.as_ref().map(|s| &s[..]).unwrap_or("") == "true" {
+        return true;
+    }
+    
+    // TODO match requested scopes against granted scopes
+    
     true
 }
 

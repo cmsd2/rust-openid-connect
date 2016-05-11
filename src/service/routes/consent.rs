@@ -96,10 +96,9 @@ pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     let maybe_authorize_params = try!(return_token.claims.get_value::<HashMap<String,Vec<String>>>("params").map_err(OpenIdConnectError::from));
     let authorize_params = try!(maybe_authorize_params.ok_or(OpenIdConnectError::RoutingError("no authorize payload in consent redirect token".to_owned())).map_err(OpenIdConnectError::from));
      
-    let authorize_request = try!(AuthorizeRequest::load_from_params(req, &authorize_params));
+    let mut authorize_request = try!(AuthorizeRequest::load_from_params(req, &authorize_params));
     debug!("consent: {:?}", authorize_request);
     
-    let return_uri = try!(redirect_back_url(req, &params)).unwrap_or(home_url);
                 
     if !authenticated {
         let url = try!(auth_redirect_url(req, "/login", &authorize_request));
@@ -108,6 +107,13 @@ pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     }
     
     // TODO save granted permissions
+        
+    authorize_request.step = Some("complete".to_owned());
+    
+    let redirect_params = return_params(try!(authorize_request.encode("authorize", &config.mac_signer)));
+    let return_uri = try!(relative_url(req, "/authorize", Some(redirect_params)));
+    //.ok_or(OpenIdConnectError::RoutingError("unable to redirect".to_owned())));
+
 
     Ok(Response::with((status::Found, Redirect(return_uri))))
 }
