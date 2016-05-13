@@ -240,7 +240,12 @@ pub fn auth_complete_url(_req: &mut Request, authorize_request: &AuthorizeReques
         query_pairs.push(("token".to_owned(), "blah".to_owned()));
     }
     
-    uri.set_query_from_pairs(query_pairs);
+    if ResponseMode::Query == authorize_request.response_mode.unwrap_or(
+            ResponseMode::default_for_response_type(authorize_request.response_type)) {
+        uri.set_query_from_pairs(query_pairs);
+    } else {
+        uri.fragment = Some(url::form_urlencoded::serialize(query_pairs));
+    }
       
     Ok(uri.to_string())
 }
