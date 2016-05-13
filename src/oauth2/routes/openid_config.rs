@@ -7,7 +7,6 @@ use iron::mime::Mime;
 use persistent;
 use serde_json;
 
-use config::Config;
 use result::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

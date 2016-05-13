@@ -184,9 +184,7 @@ impl SessionController {
 
     pub fn load_session(&self, req: &mut Request) -> Result<Option<UserSession>> {
         debug!("loading session");
-        let config_arc = try!(req.get::<persistent::Read<LoginConfig>>());
-        let config = (*config_arc).clone();
-                
+    
         let session = if let Some(session_id) = try!(self.load_session_id(req)) {
             debug!("looking up session {}", session_id);
             try!(self.sessions.lookup(&session_id))

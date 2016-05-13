@@ -1,17 +1,11 @@
-use std::collections::HashMap;
 use std;
 
 use serde::{Serializer, Deserializer};
-use serde::de::Visitor;
 use serde;
 use rbvt::result::ValidationError;
-use rbvt::params::*;
 use rbvt::state::*;
 use chrono::*;
 use result::OpenIdConnectError;
-use result::Result as RoidcResult; // serde-codegen uses std Result which clashes
-use authentication::*;
-use serialisation::*;
 
 #[derive(Clone, Debug)]
 pub struct GrantUpdate {
@@ -116,13 +110,13 @@ impl serde::Serialize for Grant {
 
 impl <'a> serde::ser::MapVisitor for GrantSerVisitor<'a> {
     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error> where S: Serializer {
-        serializer.serialize_struct_elt("user_id", &self.0.user_id);
-        serializer.serialize_struct_elt("client_id", &self.0.client_id);
-        serializer.serialize_struct_elt("permissions_allowed", &self.0.permissions_allowed);
-        serializer.serialize_struct_elt("permissions_denied", &self.0.permissions_denied);
-        serializer.serialize_struct_elt("created_at", &self.0.created_at.timestamp());
-        serializer.serialize_struct_elt("modified_at", &self.0.modified_at.timestamp());
-        serializer.serialize_struct_elt("accessed_at", &self.0.accessed_at.timestamp());
+        try!(serializer.serialize_struct_elt("user_id", &self.0.user_id));
+        try!(serializer.serialize_struct_elt("client_id", &self.0.client_id));
+        try!(serializer.serialize_struct_elt("permissions_allowed", &self.0.permissions_allowed));
+        try!(serializer.serialize_struct_elt("permissions_denied", &self.0.permissions_denied));
+        try!(serializer.serialize_struct_elt("created_at", &self.0.created_at.timestamp()));
+        try!(serializer.serialize_struct_elt("modified_at", &self.0.modified_at.timestamp()));
+        try!(serializer.serialize_struct_elt("accessed_at", &self.0.accessed_at.timestamp()));
         Ok(None)
     }
 }

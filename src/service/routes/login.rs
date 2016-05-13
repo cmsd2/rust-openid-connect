@@ -1,6 +1,5 @@
 use std::io::Read;
 use std::collections::HashMap;
-use std::borrow::Cow;
 
 use iron::prelude::*;
 use iron::status;
@@ -110,8 +109,6 @@ pub fn parse_login_request(req: &mut Request) -> Result<LoginRequest> {
 /// otherwise redirect to caller
 /// on error set flash error and render login form
 pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
-    let config = try!(Config::get(req));
-    
     let mut view = try!(View::new_for_session("login.html", req));
     
     match req.get_ref::<UrlEncodedQuery>() {

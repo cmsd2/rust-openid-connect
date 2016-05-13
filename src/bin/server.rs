@@ -40,7 +40,6 @@ use openid_connect::routes::applications;
 use openid_connect::routes::grants;
 use openid_connect::users::*;
 use openid_connect::config::*;
-use openid_connect::handlers::*;
 use openid_connect::oauth2;
 use openid_connect::oauth2::routes::openid_config;
 use openid_connect::oauth2::models::client::*;
@@ -123,7 +122,7 @@ pub fn main() {
     // form request forgery protection
     // TODO move the hbse out to be reused
     // TODO macro syntax to wrap several routes similarly
-    fn web_handler<T>(config: &Config, route: T) -> Chain
+    fn web_handler<T>(_config: &Config, route: T) -> Chain
     where T: Handler
     {
         let mut hbse = HandlebarsEngine::new();
@@ -140,7 +139,7 @@ pub fn main() {
     // json accept and content types
     // json error page
     // jwt validation
-    fn api_handler<T>(config: &Config, route: T) -> Chain
+    fn api_handler<T>(_config: &Config, route: T) -> Chain
     where T: Handler
     {
         let mut chain = Chain::new(route);

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use iron;
 use iron::prelude::*;
 use iron::status;
-use iron::modifiers::{Redirect, RedirectRaw};
-use plugin::{Extensible, Pluggable};
+use iron::modifiers::Redirect;
+use plugin::Pluggable;
 use plugin::Plugin as PluginPlugin;
 use urlencoded::UrlEncodedQuery;
 use url;
@@ -203,13 +203,15 @@ pub fn auth_consent_url(req: &mut Request, authorize_request: &AuthorizeRequest)
     relative_url(req, path, Some(authorize_request.to_params()))
 }
 
-pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<String> {
+pub fn auth_complete_url(_req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<String> {
     let base_uri = &authorize_request.redirect_uri;
     let mut uri = try!(url::Url::parse(base_uri));
     
     //let mut query_pairs = uri.query_pairs_mut();
     let mut query_pairs = vec![];
     // query_pairs.clear();
+    
+    //TODO generate real tokens
     
     if authorize_request.response_type.code {
         // query_pairs.append_pair("code", "blah");
@@ -253,8 +255,6 @@ pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
 /// otherwise redirect to redirect_uri with code or id_token depending on flow
 /// on error either render error or return error response to RP via redirect
 pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
-    let config = try!(Config::get(req));
-    
     debug!("/authorize");
     let authorize_request = try!(AuthorizeRequest::load_from_query(req));
     debug!("authorize: {:?}", authorize_request);

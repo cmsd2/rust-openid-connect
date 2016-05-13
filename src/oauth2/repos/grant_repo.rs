@@ -1,12 +1,9 @@
 use std::sync::{Arc, Mutex};
 
-use rbvt::result::ValidationError;
 use chrono::*;
 
 use result::{Result, OpenIdConnectError};
-use authentication::*;
-
-use super::super::models::grant::*;
+use oauth2::models::grant::*;
 
 pub trait GrantRepo where Self: Send + Sync {
     fn get_user_grants(&self, user_id: &str) -> Result<Vec<Grant>>;
@@ -53,7 +50,7 @@ impl GrantRepo for InMemoryGrantRepo {
         Ok(grants.iter().filter(|g| g.user_id == user_id).map(|g| g.clone()).collect())
     }
     
-    fn create_or_update_grant(&self, mut input: GrantUpdate) -> Result<Grant> {
+    fn create_or_update_grant(&self, input: GrantUpdate) -> Result<Grant> {
         debug!("grant: create {:?}", input);
         
         let mut grants = self.grants.lock().unwrap();

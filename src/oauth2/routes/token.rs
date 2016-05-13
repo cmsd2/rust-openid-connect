@@ -14,7 +14,6 @@ use oauth2::models::tokens::{Token, TokenType};
 use authentication;
 use jsonwebtoken::*;
 use jsonwebtoken::jwt::*;
-use jsonwebtoken::signer::*;
 use jsonwebtoken::crypto::mac_signer::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]

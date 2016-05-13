@@ -2,18 +2,14 @@ use std::collections::HashMap;
 use iron::prelude::*;
 use iron;
 use result::*;
-use urlencoded::UrlEncodedQuery;
 use urls::*;
 use jsonwebtoken::jwt::{Jwt, JwtClaims};
 use jsonwebtoken::JsonValueMapAccessors;
 use jsonwebtoken::claims::claims_verifier;
 use config::Config;
 use chrono::*;
-use serde::Serialize;
-use serde_json;
 use rbvt::params::*;
-use rbvt::validation::{ValidationSchema, Validator};
-use rbvt::state::*;
+use rbvt::validation::Validator;
 
 pub type RedirectToken = Jwt;
 

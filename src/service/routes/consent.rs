@@ -1,6 +1,4 @@
-use std::io::Read;
 use std::collections::HashMap;
-use std::borrow::Cow;
 
 use iron;
 use iron::prelude::*;
@@ -11,8 +9,6 @@ use serde_json::value;
 use plugin::Plugin as PluginPlugin;
 use jsonwebtoken::JsonValueMapAccessors;
 
-use rbvt::state::*;
-use rbvt::result::ValidationError;
 use rbvt::params::*;
 use result::{Result, OpenIdConnectError};
 use urls::*;
@@ -90,8 +86,7 @@ pub fn consent_get_handler(req: &mut Request) -> IronResult<Response> {
 pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     let config = try!(Config::get(req));
     let session = try!(UserSession::eval(req));
-    let authenticated = session.as_ref().map(|s| s.authenticated).unwrap_or(false);  
-    let home_url = try!(relative_url(req, "/", None));
+    let authenticated = session.as_ref().map(|s| s.authenticated).unwrap_or(false);
     let params = try!(req.get::<UrlEncodedBody>().map_err(OpenIdConnectError::from));
     let maybe_return_token = try!(load_token(req, &params, "return").map_err(OpenIdConnectError::from));
     let return_token = try!(maybe_return_token.ok_or(OpenIdConnectError::RoutingError("no return token in consent form post".to_owned())).map_err(OpenIdConnectError::from));
@@ -113,7 +108,7 @@ pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     let user_id = try!(user_session.user_id.ok_or(OpenIdConnectError::UserNotFound));
     let mut update = GrantUpdate::new(user_id, authorize_request.client_id.clone());
     update.permissions_added = multimap_get_maybe(&params, "permissions").map(|p| p.clone()).unwrap_or(vec![]);
-    config.grant_repo.create_or_update_grant(update);
+    try!(config.grant_repo.create_or_update_grant(update));
         
     authorize_request.step = Some("complete".to_owned());
     

@@ -4,7 +4,6 @@ use iron;
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
-use urlencoded::UrlEncodedBody;
 use serde_json::value;
 
 use config::Config;
@@ -117,9 +116,9 @@ pub fn grants_update_handler(req: &mut Request) -> IronResult<Response> {
     let user_id = try!(user_session.user_id.ok_or(OpenIdConnectError::UserNotFound));
     
     let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
-    let client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
+    let _client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
     let maybe_grant = try!(config.grant_repo.find_grant(&user_id, client_id));
-    let grant = try!(maybe_grant.ok_or(OpenIdConnectError::GrantNotFound));
+    let _grant = try!(maybe_grant.ok_or(OpenIdConnectError::GrantNotFound));
     
     //TODO update grant
     
