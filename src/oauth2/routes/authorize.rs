@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use iron;
 use iron::prelude::*;
 use iron::status;
-use iron::modifiers::Redirect;
+use iron::modifiers::{Redirect, RedirectRaw};
 use plugin::{Extensible, Pluggable};
 use plugin::Plugin as PluginPlugin;
 use urlencoded::UrlEncodedQuery;
+use url;
 
 use jsonwebtoken;
 use jsonwebtoken::signer::*;
@@ -202,8 +203,32 @@ pub fn auth_consent_url(req: &mut Request, authorize_request: &AuthorizeRequest)
     relative_url(req, path, Some(authorize_request.to_params()))
 }
 
-pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    unimplemented!()
+pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<String> {
+    let base_uri = &authorize_request.redirect_uri;
+    let mut uri = try!(url::Url::parse(base_uri));
+    
+    //let mut query_pairs = uri.query_pairs_mut();
+    let mut query_pairs = vec![];
+    // query_pairs.clear();
+    
+    if authorize_request.response_type.code {
+        // query_pairs.append_pair("code", "blah");
+        query_pairs.push(("code".to_owned(), "blah".to_owned()));
+    }
+    
+    if authorize_request.response_type.id_token {
+        // query_pairs.append_pair("id_token", "blah");
+        query_pairs.push(("id_token".to_owned(), "blah".to_owned()));
+    }
+    
+    if authorize_request.response_type.token {
+        // query_pairs.append_pair("token", "blah");
+        query_pairs.push(("token".to_owned(), "blah".to_owned()));
+    }
+    
+    uri.set_query_from_pairs(query_pairs);
+      
+    Ok(uri.to_string())
 }
 
 pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
@@ -246,9 +271,7 @@ pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
         
         Ok(Response::with((status::Found, Redirect(consent_url))))
     } else {
-        let complete_url = try!(auth_complete_url(req, &authorize_request));
-        
-        Ok(Response::with((status::Found, Redirect(complete_url))))
+        Ok(Response::with((status::Found, RoidcRedirectRaw(try!(auth_complete_url(req, &authorize_request))))))
     }
 }
 

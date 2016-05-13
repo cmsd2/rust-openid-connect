@@ -1,0 +1,9 @@
+<section id="grants">
+    <ul class="grants-list">
+        {{#each grants}}
+            {{> grants/show.html }}
+        {{else}}
+            <li class="empty">No permission grants</li>
+        {{/each}}
+    </ul>
+</section>

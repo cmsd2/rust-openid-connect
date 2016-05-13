@@ -33,11 +33,12 @@ pub fn grants_index_handler(req: &mut Request) -> IronResult<Response> {
     let user_session = try!(session.ok_or(OpenIdConnectError::NoSessionLoaded));
     let user_id = try!(user_session.user_id.ok_or(OpenIdConnectError::UserNotFound));
     
-    let grants_list = try!(config.grant_repo.get_user_grants(&user_id));
-    
     let mut view = try!(View::new_for_session("grants/index.html", req));
-    
-    //view.data.insert("grants".to_owned(), value::to_value(&grants_list));
+   
+    let grants_list = try!(config.grant_repo.get_user_grants(&user_id));
+    debug!("found grants: {:?}", grants_list);
+    view.data.insert("grants".to_owned(), value::to_value(&grants_list));
+    debug!("rendering view {:?}", view);
     
     Ok(Response::with((status::Ok, view.template())))
 }

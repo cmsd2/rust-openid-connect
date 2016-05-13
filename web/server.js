@@ -16,6 +16,7 @@ var proxiedRoutes = [
       '^/consent',
       '^/register',
       '^/applications',
+      '^/grants',
       '^/identity',
       '^/.well-known/openid-configuration',
       '^/$'

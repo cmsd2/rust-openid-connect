@@ -1,0 +1,18 @@
+<div class="grant">
+    <div class="name">{{ name }}</div>
+    <div class="client_id hidden">{{ client_id }}</div>
+    <ul class="permissions_allowed">
+        {{#each permissions_allowed}}
+            <li class="permission allow">{{this}}</li>
+        {{else}}
+            <li class="empty">No permissions allowed</li>
+        {{/each}}
+    </ul>
+    <ul class="permissions_denied">
+        {{#each permissions_denied}}
+            <li class="permission deny">{{this}}</li>
+        {{/each}}
+    </ul>
+    <div><a href="/grants/{{client_id}}/edit">Edit</a></div>
+    <div><a href="/grants/{{client_id}}/delete">Delete</a></div>
+</div>

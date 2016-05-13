@@ -1,8 +1,5 @@
-use std::marker::PhantomData;
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
-use serde::de::{Error, Visitor};
 use chrono::*;
-use cast;
 use std;
 
 pub trait SerializeWith: Sized {
