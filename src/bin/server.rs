@@ -153,6 +153,7 @@ pub fn main() {
     let mut router = Router::new();
 //    router.get("/.well-known/)
     router.get("/authorize", web_handler(&config, oauth2::authorize_handler));
+    router.get("/complete", web_handler(&config, oauth2::complete_handler));
     router.get("/", web_handler(&config, home_handler));
     router.get("/login", web_handler(&config, service::login_get_handler));
     router.post("/login", web_handler(&config, service::login_post_handler));

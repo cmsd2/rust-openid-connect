@@ -26,9 +26,94 @@ use config::Config;
 use oauth2::{ClientApplication, ClientApplicationRepo};
 use sessions::UserSession;
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum AuthorizeStep {
+    Authorize,
+    Login,
+    Consent,
+    Complete,
+}
+
+#[derive(Clone, Debug)]
+pub struct AuthorizeRequestState {
+    pub request: AuthorizeRequest,
+    pub step: AuthorizeStep,
+    pub client: Option<ClientApplication>,
+}
+
+impl AuthorizeRequestState {
+    pub fn new(request: AuthorizeRequest) -> AuthorizeRequestState {
+        AuthorizeRequestState {
+            request: request,
+            step: AuthorizeStep::Authorize,
+            client: None,
+        }
+    }
+    
+    pub fn validate(&self, validation_state: &mut ValidationState) -> Result<bool> {
+        //self.validation_state = ValidationState::new();
+        
+        let openid_scope = "openid";
+        if !self.request.has_scope(openid_scope) {
+            validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));
+        }
+        
+        if let Some(ref client) = self.client {
+            if !client.match_redirect_uri(&self.request.redirect_uri) {
+                validation_state.reject("redirect_uri", ValidationError::InvalidValue("redirect_uri does not match".to_owned()));
+            }
+        } else {
+            validation_state.reject("client_id", ValidationError::InvalidValue("client not found for client_id".to_owned()));
+        }
+        
+        if let Some(response_mode) = self.request.response_mode {
+            if let Err(e) = ResponseMode::validate_response_mode(response_mode, self.request.response_type) {
+                validation_state.reject("response_mode", ValidationError::InvalidValue(e.to_string()));
+            }
+        }
+        
+        Ok(validation_state.valid)
+    }
+    
+    pub fn load_client(&mut self, client_repo: &ClientApplicationRepo) -> Result<()> {
+        self.client = try!(client_repo.find_client_application(&self.request.client_id));
+
+        Ok(())
+    }
+    
+    pub fn load_from_query(req: &mut Request) -> Result<AuthorizeRequestState> {
+        let hashmap = try!(req.get::<UrlEncodedQuery>());
+        
+        Self::load_from_params(req, &hashmap)
+    }
+    
+    pub fn load_from_params(req: &mut Request, hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequestState> {
+        let config = try!(Config::get(req));
+        
+        let auth_req = if let Some(jwt_req) = try!(multimap_get_maybe_one(hashmap, "request")) {
+            try!(AuthorizeRequest::decode(&jwt_req, &config.mac_signer))
+        } else {
+            try!(AuthorizeRequest::from_params(hashmap))
+        };
+        
+        let mut auth_req_state = AuthorizeRequestState::new(auth_req);
+    
+        try!(auth_req_state.load_client(&**config.application_repo));        
+        
+        let mut validation_state = ValidationState::new();
+        
+        if ! try!(auth_req_state.validate(&mut validation_state)) {
+            return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(validation_state)));
+        }
+    
+        Ok(auth_req_state)
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthorizeRequest {
+    pub iss: Option<String>,
+    pub aud: Option<String>,
     pub response_type: ResponseType,
     pub scopes: Vec<String>, // required. must contain at least "openid" scope.
     pub client_id: String,
@@ -39,21 +124,13 @@ pub struct AuthorizeRequest {
     pub prompt: Option<String>,
     pub display: Option<String>,
     // other stuff: max_age, ui_locales, id_token_hint, login_hint, acr_values
-    
-    pub step: Option<String>, // internal use. only loaded via signed params. for linking between /authorize and /consent
-    
-    #[serde(skip_serializing, skip_deserializing)]
-    pub client: Option<ClientApplication>,
-    
-    // #[serde(skip_serializing, skip_deserializing)]
-    // #[serde(skip_serializing)]
-    // validation_state: Option<ValidationState>,
 }
-
 
 impl AuthorizeRequest {
     pub fn new(response_type: ResponseType, client_id: String, redirect_uri: String) -> AuthorizeRequest {
         AuthorizeRequest {
+            iss: None,
+            aud: None,
             response_type: response_type,
             scopes: vec![],
             client_id: client_id,
@@ -63,16 +140,17 @@ impl AuthorizeRequest {
             response_mode: None,
             prompt: None,
             display: None,
-            
-            step: None,
-            
-            client: None,
-            // validation_state: ValidationState::default()
         }
     }
     
     pub fn to_params(&self) -> HashMap<String, Vec<String>> {
         let mut params = HashMap::new();
+        if self.iss.is_some() {
+            params.insert("iss".to_owned(), vec![self.iss.as_ref().unwrap().to_owned()]);
+        }
+        if self.aud.is_some() {
+            params.insert("aud".to_owned(), vec![self.aud.as_ref().unwrap().to_owned()]);
+        }
         params.insert("response_type".to_owned(), vec![self.response_type.to_string()]);
         params.insert("scope".to_owned(), self.scopes.clone());
         params.insert("client_id".to_owned(), vec![self.client_id.clone()]);
@@ -97,6 +175,8 @@ impl AuthorizeRequest {
     }
     
     pub fn from_params(hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
+        let iss = try!(multimap_get_maybe_one(hashmap, "iss"));
+        let aud = try!(multimap_get_maybe_one(hashmap, "aud"));
         let response_type = try!(multimap_get_one(hashmap, "response_type"));
         let scopes = try!(multimap_get(hashmap, "scope"));
         let client_id = try!(multimap_get_one(hashmap, "client_id"));
@@ -113,6 +193,8 @@ impl AuthorizeRequest {
         };
     
         Ok(AuthorizeRequest {
+            iss: iss.map(|s| s.to_owned()),
+            aud: aud.map(|s| s.to_owned()),
             response_type: try!(ResponseType::from_str(response_type)),
             scopes: scopes.clone(),
             client_id: client_id.to_owned(),
@@ -122,74 +204,11 @@ impl AuthorizeRequest {
             display: display.map(|s| s.to_owned()),
             nonce: nonce.map(|s| s.to_owned()),
             response_mode: response_mode.clone(),
-            
-            step: None,
-            
-            client: None,
-            
-            // validation_state: ValidationState::new(),
         })
-    }
-    
-    pub fn load_client(&mut self, client_repo: &ClientApplicationRepo) -> Result<()> {
-        self.client = try!(client_repo.find_client_application(&self.client_id));
-
-        Ok(())
     }
     
     pub fn has_scope(&self, scope: &str) -> bool {
         self.scopes.iter().find(|s| *s == scope).is_some()
-    }
-    
-    pub fn validate(&mut self, validation_state: &mut ValidationState) -> Result<bool> {
-        //self.validation_state = ValidationState::new();
-        
-        let openid_scope = "openid";
-        if !self.has_scope(openid_scope) {
-            validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));
-        }
-        
-        if let Some(ref client) = self.client {
-            if !client.match_redirect_uri(&self.redirect_uri) {
-                validation_state.reject("redirect_uri", ValidationError::InvalidValue("redirect_uri does not match".to_owned()));
-            }
-        } else {
-            validation_state.reject("client_id", ValidationError::InvalidValue("client not found for client_id".to_owned()));
-        }
-        
-        if let Some(response_mode) = self.response_mode {
-            if let Err(e) = ResponseMode::validate_response_mode(response_mode, self.response_type) {
-                validation_state.reject("response_mode", ValidationError::InvalidValue(e.to_string()));
-            }
-        }
-        
-        Ok(validation_state.valid)
-    }
-    
-    pub fn load_from_query(req: &mut Request) -> Result<AuthorizeRequest> {
-        let hashmap = try!(req.get::<UrlEncodedQuery>());
-        
-        Self::load_from_params(req, &hashmap)
-    }
-    
-    pub fn load_from_params(req: &mut Request, hashmap: &HashMap<String, Vec<String>>) -> Result<AuthorizeRequest> {
-        let config = try!(Config::get(req));
-        
-        let mut auth_req = if let Some(jwt_req) = try!(multimap_get_maybe_one(hashmap, "jwt_req")) {
-            try!(AuthorizeRequest::decode(&jwt_req, &config.mac_signer))
-        } else {
-            try!(AuthorizeRequest::from_params(hashmap))
-        };
-    
-        try!(auth_req.load_client(&**config.application_repo));
-    
-        let mut validation_state = ValidationState::new();
-        
-        if ! try!(auth_req.validate(&mut validation_state)) {
-            return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(validation_state)));
-        }
-    
-        Ok(auth_req)
     }
     
     pub fn encode<S: Signer>(&self, jwt_type: &str, signer: &S) -> Result<String> {
@@ -215,7 +234,13 @@ pub fn auth_consent_url(req: &mut Request, authorize_request: &AuthorizeRequest)
     relative_url(req, path, Some(authorize_request.to_params()))
 }
 
-pub fn auth_complete_url(_req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<String> {
+pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
+    let path = "/complete";
+    
+    relative_url(req, path, Some(authorize_request.to_params()))
+}
+
+pub fn auth_return_to_client_url(_req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<String> {
     let base_uri = &authorize_request.redirect_uri;
     let mut uri = try!(url::Url::parse(base_uri));
     
@@ -251,10 +276,6 @@ pub fn auth_complete_url(_req: &mut Request, authorize_request: &AuthorizeReques
 }
 
 pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
-    if authorize_request.step.as_ref().map(|s| &s[..]).unwrap_or("") == "complete" {
-        return false;
-    }
-    
     // TODO match boolean truthy strings?
     if authorize_request.prompt.as_ref().map(|s| &s[..]).unwrap_or("") == "true" {
         return true;
@@ -269,26 +290,50 @@ pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
 /// login with cookie if possible
 /// if not logged in or reprompting for credentials redirect to login url
 /// otherwise if not got consent or reprompting for consent redirect to consent url
-/// otherwise redirect to redirect_uri with code or id_token depending on flow
+/// otherwise redirect to completion url
 /// on error either render error or return error response to RP via redirect
 pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     debug!("/authorize");
-    let authorize_request = try!(AuthorizeRequest::load_from_query(req));
+    let authorize_request = try!(AuthorizeRequestState::load_from_query(req));
     debug!("authorize: {:?}", authorize_request);
     
     let session = try!(UserSession::eval(req));
     let authenticated = session.map(|s| s.authenticated).unwrap_or(false);
     
     if !authenticated {
-        let url = try!(auth_redirect_url(req, "/login", &authorize_request));
+        let url = try!(auth_redirect_url(req, "/login", &authorize_request.request));
     
         Ok(Response::with((status::Found, Redirect(url))))
-    } else if should_prompt(&authorize_request) {
-        let consent_url = try!(auth_consent_url(req, &authorize_request));
+    } else if should_prompt(&authorize_request.request) {
+        let consent_url = try!(auth_consent_url(req, &authorize_request.request));
         
         Ok(Response::with((status::Found, Redirect(consent_url))))
     } else {
-        Ok(Response::with((status::Found, RoidcRedirectRaw(try!(auth_complete_url(req, &authorize_request))))))
+        let complete_url = try!(auth_complete_url(req, &authorize_request.request));
+        
+        Ok(Response::with((status::Found, Redirect(complete_url))))
+    }
+}
+
+/// called by user agent after logging in and giving consent
+/// login with cookie if possible
+/// if not logged in or reprompting for credentials redirect to login url
+/// otherwise redirect to redirect_uri with code or id_token depending on flow
+/// on error either render error or return error response to RP via redirect
+pub fn complete_handler(req: &mut Request) -> IronResult<Response> {
+    debug!("/complete");
+    let authorize_request = try!(AuthorizeRequestState::load_from_query(req));
+    debug!("complete: {:?}", authorize_request);
+    
+    let session = try!(UserSession::eval(req));
+    let authenticated = session.map(|s| s.authenticated).unwrap_or(false);
+    
+    if !authenticated {
+        let url = try!(redirect_forwards_url(req, "/complete", "/login", authorize_request.request.to_params()));
+    
+        Ok(Response::with((status::Found, Redirect(url))))
+    } else {
+        Ok(Response::with((status::Found, RoidcRedirectRaw(try!(auth_return_to_client_url(req, &authorize_request.request))))))
     }
 }
 

@@ -12,6 +12,7 @@ var proxiedRoutes = [
       '^/api/',
       '^/token',
       '^/authorize',
+      '^/complete',
       '^/login',
       '^/consent',
       '^/register',

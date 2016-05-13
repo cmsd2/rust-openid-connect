@@ -16,7 +16,7 @@ use config::Config;
 use view::View;
 use back::*;
 use sessions::UserSession;
-use oauth2::routes::authorize::{AuthorizeRequest, auth_redirect_url};
+use oauth2::routes::authorize::{AuthorizeRequest, AuthorizeRequestState, auth_redirect_url};
 use oauth2::models::*;
 use oauth2::repos::*;
 
@@ -54,21 +54,19 @@ pub fn consent_get_handler(req: &mut Request) -> IronResult<Response> {
      
     let params = try!(req.get::<UrlEncodedQuery>().map_err(OpenIdConnectError::from));
     
-    let mut authorize_request = try!(AuthorizeRequest::load_from_query(req));
+    let authorize_request = try!(AuthorizeRequestState::load_from_query(req));
     debug!("consent: {:?}", authorize_request);
                 
     if !authenticated {
-        let url = { try!(consent_redirect_url(req, "/login", &authorize_request)) };
+        let url = { try!(consent_redirect_url(req, "/login", &authorize_request.request)) };
     
         return Ok(Response::with((status::Found, Redirect(url))));
     }
-                
-    try!(authorize_request.load_client(&**config.application_repo));  
-            
-    view.data.insert("permissions".to_owned(), value::to_value(&permissions_for_scopes(&authorize_request.scopes)));
+       
+    view.data.insert("permissions".to_owned(), value::to_value(&permissions_for_scopes(&authorize_request.request.scopes)));
     view.data.insert("client".to_owned(), value::to_value(&authorize_request.client));    
     
-    let return_token = RedirectToken::new_for_path_and_params("/authorize", &authorize_request.to_params());
+    let return_token = RedirectToken::new_for_path_and_params("/authorize", &authorize_request.request.to_params());
     // view.data.insert("return".to_owned(), value::to_value(&return_token));
     let encoded_token = try!(return_token.encode(&config.mac_signer).map_err(OpenIdConnectError::from));
     view.data.insert("return".to_owned(), value::to_value(&encoded_token));
@@ -93,12 +91,12 @@ pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     let maybe_authorize_params = try!(return_token.claims.get_value::<HashMap<String,Vec<String>>>("params").map_err(OpenIdConnectError::from));
     let authorize_params = try!(maybe_authorize_params.ok_or(OpenIdConnectError::RoutingError("no authorize payload in consent redirect token".to_owned())).map_err(OpenIdConnectError::from));
      
-    let mut authorize_request = try!(AuthorizeRequest::load_from_params(req, &authorize_params));
+    let authorize_request = try!(AuthorizeRequestState::load_from_params(req, &authorize_params));
     debug!("consent: {:?}", authorize_request);
     
                 
     if !authenticated {
-        let url = try!(auth_redirect_url(req, "/login", &authorize_request));
+        let url = try!(auth_redirect_url(req, "/login", &authorize_request.request));
     
         return Ok(Response::with((status::Found, Redirect(url))));
     }
@@ -106,16 +104,12 @@ pub fn consent_post_handler(req: &mut Request) -> IronResult<Response> {
     // TODO save granted permissions
     let user_session = try!(session.ok_or(OpenIdConnectError::NoSessionLoaded));
     let user_id = try!(user_session.user_id.ok_or(OpenIdConnectError::UserNotFound));
-    let mut update = GrantUpdate::new(user_id, authorize_request.client_id.clone());
+    let mut update = GrantUpdate::new(user_id, authorize_request.request.client_id.clone());
     update.permissions_added = multimap_get_maybe(&params, "permissions").map(|p| p.clone()).unwrap_or(vec![]);
     try!(config.grant_repo.create_or_update_grant(update));
-        
-    authorize_request.step = Some("complete".to_owned());
     
-    let redirect_params = return_params(try!(authorize_request.encode("authorize", &config.mac_signer)));
-    let return_uri = try!(relative_url(req, "/authorize", Some(redirect_params)));
-    //.ok_or(OpenIdConnectError::RoutingError("unable to redirect".to_owned())));
-
+    let redirect_params = return_params(try!(authorize_request.request.encode("authorize", &config.mac_signer)));
+    let return_uri = try!(relative_url(req, "/complete", Some(redirect_params)));
 
     Ok(Response::with((status::Found, Redirect(return_uri))))
 }
