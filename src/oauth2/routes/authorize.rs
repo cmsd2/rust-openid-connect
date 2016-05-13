@@ -21,6 +21,7 @@ use rbvt::state::*;
 use rbvt::result::ValidationError;
 use urls::*;
 use response_type::ResponseType;
+use response_mode::*;
 use config::Config;
 use oauth2::{ClientApplication, ClientApplicationRepo};
 use sessions::UserSession;
@@ -34,7 +35,7 @@ pub struct AuthorizeRequest {
     state: Option<String>, // recommended
     nonce: Option<String>, // optional in authorization code flow. required in implicit flow
     pub redirect_uri: String, // or url type?
-    pub response_mode: Option<String>, // optional
+    pub response_mode: Option<ResponseMode>, // optional
     pub prompt: Option<String>,
     pub display: Option<String>,
     // other stuff: max_age, ui_locales, id_token_hint, login_hint, acr_values
@@ -83,7 +84,7 @@ impl AuthorizeRequest {
         }
         params.insert("redirect_uri".to_owned(), vec![self.redirect_uri.clone()]);
         if self.response_mode.is_some() {
-            params.insert("response_mode".to_owned(), vec![self.response_mode.as_ref().unwrap().to_owned()]);
+            params.insert("response_mode".to_owned(), vec![self.response_mode.as_ref().unwrap().to_string()]);
         }
         if self.prompt.is_some() {
             params.insert("prompt".to_owned(), vec![self.prompt.as_ref().unwrap().to_owned()]);
@@ -104,7 +105,12 @@ impl AuthorizeRequest {
         let prompt = try!(multimap_get_maybe_one(hashmap, "prompt"));
         let display = try!(multimap_get_maybe_one(hashmap, "display"));
         let nonce = try!(multimap_get_maybe_one(hashmap, "nonce"));
-        let response_mode = try!(multimap_get_maybe_one(hashmap, "response_mode"));
+        let maybe_response_mode_str = try!(multimap_get_maybe_one(hashmap, "response_mode"));
+        let response_mode = if let Some(response_mode_str) = maybe_response_mode_str {
+            Some(try!(ResponseMode::from_str(response_mode_str)))
+        } else {
+            None
+        };
     
         Ok(AuthorizeRequest {
             response_type: try!(ResponseType::from_str(response_type)),
@@ -115,7 +121,7 @@ impl AuthorizeRequest {
             prompt: prompt.map(|s| s.to_owned()),
             display: display.map(|s| s.to_owned()),
             nonce: nonce.map(|s| s.to_owned()),
-            response_mode: response_mode.map(|s| s.to_owned()),
+            response_mode: response_mode.clone(),
             
             step: None,
             
@@ -149,6 +155,12 @@ impl AuthorizeRequest {
             }
         } else {
             validation_state.reject("client_id", ValidationError::InvalidValue("client not found for client_id".to_owned()));
+        }
+        
+        if let Some(response_mode) = self.response_mode {
+            if let Err(e) = ResponseMode::validate_response_mode(response_mode, self.response_type) {
+                validation_state.reject("response_mode", ValidationError::InvalidValue(e.to_string()));
+            }
         }
         
         Ok(validation_state.valid)
