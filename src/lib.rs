@@ -42,6 +42,7 @@ pub mod service;
 pub mod response_type;
 pub mod back;
 pub mod serialisation;
+pub mod response_mode;
 
 
 #[cfg(test)]

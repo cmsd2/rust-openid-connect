@@ -22,6 +22,11 @@ quick_error! {
             cause(err)
         }
       
+        UnknownResponseMode(rm: Box<String>) {
+            description("unknown response_mode")
+            display("Unknown response_mode: {}", rm.as_ref())
+        }
+        
         UnknownResponseType(response_type: Box<String>) {
             description("unknown response_type")
             display("Unknown response_type: {}", response_type.as_ref())
@@ -165,6 +170,11 @@ quick_error! {
         GrantNotFound {
             description("grant not found")
             display("Grant not found")
+        }
+        
+        ResponseModeUnavailable {
+            description("the chosen response mode is unavailable for this authorize request")
+            display("the chosen response mode is unavailable for this authorize request")
         }
     }
 }
