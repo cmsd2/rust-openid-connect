@@ -4,7 +4,7 @@ use iron;
 use result::*;
 use urls::*;
 use jsonwebtoken::jwt::{Jwt, JwtClaims};
-use jsonwebtoken::JsonValueMapAccessors;
+use jsonwebtoken::json::*;
 use jsonwebtoken::claims::claims_verifier;
 use config::Config;
 use chrono::*;
@@ -23,7 +23,7 @@ impl RedirectTokenConstructors for RedirectToken {
         let now = UTC::now().timestamp();
         let later = now + 3600;
         
-        let mut t = RedirectToken::new();
+        let mut t = RedirectToken::default();
         t.header.typ = Some("redirect".to_owned());
         t.claims.set_value("nbf", &now);
         t.claims.set_value("exp", &later);

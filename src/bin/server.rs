@@ -108,7 +108,7 @@ pub fn main() {
     
     let grant_repo = Arc::new(Box::new(oauth2::InMemoryGrantRepo::new()) as Box<oauth2::GrantRepo>);
     
-    let token_repo = Arc::new(Box::new(oauth2::InMemoryTokenRepo::new()) as Box<oauth2::TokenRepo>);
+    let token_repo = Arc::new(Box::new(oauth2::InMemoryTokenRepo::new(user_repo.clone(), grant_repo.clone())) as Box<oauth2::TokenRepo>);
     
     let cookie_signing_key = b"My secret key"[..].to_owned();
     let mac_signer = MacSigner::new("secret").unwrap();

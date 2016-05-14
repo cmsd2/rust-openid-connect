@@ -80,6 +80,8 @@ impl UserBuilder {
 pub trait UserRepo where Self: Send + Sync {
     fn add_user(&self, u: User) -> Result<()>;
     
+    fn get_user(&self, id: &str) -> Result<Option<User>>;
+    
     fn find_user(&self, username: &str) -> Result<Option<User>>;
     
     fn update_user(&self, u: User) -> Result<()>;
@@ -112,6 +114,12 @@ impl InMemoryUserRepo {
 }
 
 impl UserRepo for InMemoryUserRepo {
+    
+    fn get_user(&self, id: &str) -> Result<Option<User>> {
+        let users = self.users.lock().unwrap();
+        
+        Ok(users.iter().position(|u| u.id == id).map(|i| users[i].clone()))
+    }
     
     fn add_user(&self, u: User) -> Result<()> {
         let mut users = self.users.lock().unwrap();

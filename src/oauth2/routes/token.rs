@@ -12,7 +12,7 @@ use rbvt::state::*;
 use rbvt::builder::*;
 use oauth2::models::tokens::{Token, TokenType};
 use authentication;
-use jsonwebtoken::*;
+use jsonwebtoken::json::*;
 use jsonwebtoken::jwt::*;
 use jsonwebtoken::crypto::mac_signer::*;
 
@@ -155,7 +155,7 @@ pub fn token_post_handler(req: &mut Request) -> IronResult<Response> {
     debug!("token request: {:?}", token_request);
     
     //TODO move this all somewhere else 
-    let mut jwt = Jwt::new();
+    let mut jwt = Jwt::default();
     jwt.claims.set_value("iss", &"roidc");
     jwt.claims.set_value("nonce", &authentication::new_nonce());
     

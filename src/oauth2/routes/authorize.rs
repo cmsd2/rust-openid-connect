@@ -10,6 +10,7 @@ use urlencoded::UrlEncodedQuery;
 use url;
 
 use jsonwebtoken;
+use jsonwebtoken::jwt::*;
 use jsonwebtoken::signer::*;
 use jsonwebtoken::verifier::*;
 use jsonwebtoken::header::*;
@@ -238,7 +239,8 @@ pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest
     relative_url(req, path, Some(authorize_request.to_params()))
 }
 
-pub fn auth_return_to_client_url(_req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<String> {
+pub fn auth_return_to_client_url(req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest) -> Result<String> {
+    let config = try!(Config::get(req));
     let base_uri = &authorize_request.redirect_uri;
     let mut uri = try!(url::Url::parse(base_uri));
     
@@ -254,8 +256,9 @@ pub fn auth_return_to_client_url(_req: &mut Request, authorize_request: &Authori
     }
     
     if authorize_request.response_type.id_token {
-        // query_pairs.append_pair("id_token", "blah");
-        query_pairs.push(("id_token".to_owned(), "blah".to_owned()));
+        let claims = try!(config.token_repo.get_user_claims(req, user_id, &authorize_request.client_id, &authorize_request.scopes));
+        let id_token = Jwt::new(Header::default(), claims); //TODO use RSA
+        query_pairs.push(("id_token".to_owned(), try!(id_token.encode(&config.mac_signer))));
     }
     
     if authorize_request.response_type.token {
@@ -324,14 +327,17 @@ pub fn complete_handler(req: &mut Request) -> IronResult<Response> {
     debug!("complete: {:?}", authorize_request);
     
     let session = try!(UserSession::eval(req));
-    let authenticated = session.map(|s| s.authenticated).unwrap_or(false);
+    let authenticated = session.as_ref().map(|s| s.authenticated).unwrap_or(false);
     
     if !authenticated {
         let url = try!(redirect_forwards_url(req, "/complete", "/login", authorize_request.request.to_params()));
     
         Ok(Response::with((status::Found, Redirect(url))))
     } else {
-        Ok(Response::with((status::Found, RoidcRedirectRaw(try!(auth_return_to_client_url(req, &authorize_request.request))))))
+        let user_session = try!(session.ok_or(OpenIdConnectError::NoSessionLoaded));
+        let user_id = try!(user_session.user_id.ok_or(OpenIdConnectError::UserNotFound));
+    
+        Ok(Response::with((status::Found, RoidcRedirectRaw(try!(auth_return_to_client_url(req, &user_id, &authorize_request.request))))))
     }
 }
 

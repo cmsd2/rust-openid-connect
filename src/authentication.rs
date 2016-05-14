@@ -41,5 +41,7 @@ pub fn new_secret() -> String {
 
 //TODO probably want to do more than just generate random data
 pub fn new_nonce() -> String {
-    new_secret()
+    let mut bytes = [0u8; 12];
+    thread_rng().fill_bytes(&mut bytes);
+    bytes.to_base64(base64::URL_SAFE)
 }

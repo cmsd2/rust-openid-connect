@@ -184,6 +184,11 @@ quick_error! {
             display("parse error")
             cause(e)
         }
+        
+        DateError {
+            description("date error")
+            display("date error")
+        }
     }
 }
 

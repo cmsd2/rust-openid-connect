@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde;
 use chrono::*;
@@ -5,6 +6,40 @@ use std;
 use iron::Url;
 
 use result::OpenIdConnectError;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UTCDateTime {
+    #[serde(serialize_with="SerializeWith::serialize_with",deserialize_with="DeserializeWith::deserialize_with")]
+    date_time: DateTime<UTC>,
+}
+
+impl UTCDateTime {
+    pub fn new(dt: DateTime<UTC>) -> UTCDateTime {
+        UTCDateTime {
+            date_time: dt
+        }
+    }
+}
+
+impl From<DateTime<UTC>> for UTCDateTime {
+    fn from(dt: DateTime<UTC>) -> UTCDateTime {
+        UTCDateTime::new(dt)
+    }
+}
+
+impl Into<DateTime<UTC>> for UTCDateTime {
+    fn into(self) -> DateTime<UTC> {
+        self.date_time
+    }
+}
+
+impl Deref for UTCDateTime {
+    type Target = DateTime<UTC>;
+    
+    fn deref(&self) -> &DateTime<UTC> {
+        &self.date_time
+    }
+}
 
 pub trait SerializeWith: Sized {
     fn serialize_with<S>(&self, ser: &mut S) -> std::result::Result<(), S::Error>
@@ -25,6 +60,20 @@ impl SerializeWith for DateTime<UTC> {
 impl DeserializeWith for DateTime<UTC> {
     fn deserialize_with<D>(deserializer: &mut D) -> std::result::Result<DateTime<UTC>, D::Error> where D: Deserializer {
         Ok(UTC.timestamp(try!(i64::deserialize(deserializer)), 0))
+    }
+}
+
+impl SerializeWith for Duration {
+    fn serialize_with<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error> where S: Serializer {
+        self.num_seconds().serialize(serializer)
+    }
+}
+ 
+impl DeserializeWith for Duration {
+    fn deserialize_with<D>(deserializer: &mut D) -> std::result::Result<Duration, D::Error> where D: Deserializer {
+        let d = try!(i64::deserialize(deserializer));
+        
+        Ok(Duration::seconds(d))
     }
 }
 

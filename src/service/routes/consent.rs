@@ -7,7 +7,7 @@ use iron::modifiers::Redirect;
 use urlencoded::*;
 use serde_json::value;
 use plugin::Plugin as PluginPlugin;
-use jsonwebtoken::JsonValueMapAccessors;
+use jsonwebtoken::json::*;
 
 use rbvt::params::*;
 use result::{Result, OpenIdConnectError};
