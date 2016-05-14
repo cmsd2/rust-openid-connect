@@ -4,6 +4,7 @@ use iron::prelude::*;
 use iron::typemap;
 use persistent;
 
+use site_config::*;
 use users::UserRepo;
 use oauth2::{ClientApplicationRepo, GrantRepo};
 use sessions::SessionController;
@@ -18,6 +19,7 @@ pub struct Config
     pub application_repo: Arc<Box<ClientApplicationRepo>>,
     pub grant_repo: Arc<Box<GrantRepo>>,
     pub session_controller: SessionController,
+    pub site_config: SiteConfig,
 }
 
 impl Config {
@@ -33,6 +35,7 @@ impl Config {
             application_repo: application_repo,
             grant_repo: grant_repo,
             session_controller: session_controller,
+            site_config: SiteConfig::default(),
         }
     }
     

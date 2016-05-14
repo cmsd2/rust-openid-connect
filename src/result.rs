@@ -1,5 +1,6 @@
 use std::result;
 use std::io;
+use std::num;
 
 use iron::prelude::*;
 use iron::status;
@@ -175,6 +176,13 @@ quick_error! {
         ResponseModeUnavailable {
             description("the chosen response mode is unavailable for this authorize request")
             display("the chosen response mode is unavailable for this authorize request")
+        }
+        
+        ParseIntError(e: num::ParseIntError) {
+            from()
+            description("parse error")
+            display("parse error")
+            cause(e)
         }
     }
 }

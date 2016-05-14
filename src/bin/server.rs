@@ -47,6 +47,7 @@ use openid_connect::sessions;
 use openid_connect::service;
 use openid_connect::login_manager;
 use openid_connect::result::OpenIdConnectError;
+use openid_connect::site_config::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -115,6 +116,8 @@ pub fn main() {
     let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
     
     let config = Config::new(mac_signer, user_repo.clone(), application_repo.clone(), grant_repo.clone(), sessions_controller.clone());
+    
+    let site_config = SiteConfig::new();
     
     // html content type;
     // html error pages
@@ -217,6 +220,7 @@ pub fn main() {
     outer_chain.link(persistent::Read::<openid_config::WellKnownOpenIdConfiguration>::both(woidc));
     
     outer_chain.link(persistent::Read::<Config>::both(config));
+    outer_chain.link(persistent::Read::<SiteConfig>::both(site_config));
     
     Iron::new(outer_chain).http("0.0.0.0:8080").unwrap();
 }

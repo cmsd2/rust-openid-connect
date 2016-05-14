@@ -3,7 +3,7 @@
 #![plugin(serde_macros)]
 
 // for large numbers of errors definitions with quick-error
-#![recursion_limit="100"]
+#![recursion_limit="200"]
 
 extern crate iron;
 extern crate router;
@@ -43,6 +43,8 @@ pub mod response_type;
 pub mod back;
 pub mod serialisation;
 pub mod response_mode;
+pub mod site_config;
+pub mod x_headers;
 
 
 #[cfg(test)]
