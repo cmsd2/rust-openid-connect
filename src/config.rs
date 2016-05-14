@@ -6,7 +6,7 @@ use persistent;
 
 use site_config::*;
 use users::UserRepo;
-use oauth2::{ClientApplicationRepo, GrantRepo};
+use oauth2::{ClientApplicationRepo, GrantRepo, TokenRepo};
 use sessions::SessionController;
 use result::*;
 use jsonwebtoken::crypto::mac_signer::MacSigner;
@@ -18,6 +18,7 @@ pub struct Config
     pub user_repo: Arc<Box<UserRepo>>,
     pub application_repo: Arc<Box<ClientApplicationRepo>>,
     pub grant_repo: Arc<Box<GrantRepo>>,
+    pub token_repo: Arc<Box<TokenRepo>>,
     pub session_controller: SessionController,
     pub site_config: SiteConfig,
 }
@@ -28,12 +29,14 @@ impl Config {
             user_repo: Arc<Box<UserRepo>>, 
             application_repo: Arc<Box<ClientApplicationRepo>>,
             grant_repo: Arc<Box<GrantRepo>>,
+            token_repo: Arc<Box<TokenRepo>>,
             session_controller: SessionController) -> Config {
         Config {
             mac_signer: mac_signer,
             user_repo: user_repo,
             application_repo: application_repo,
             grant_repo: grant_repo,
+            token_repo: token_repo,
             session_controller: session_controller,
             site_config: SiteConfig::default(),
         }

@@ -50,9 +50,7 @@ impl AuthorizeRequestState {
         }
     }
     
-    pub fn validate(&self, validation_state: &mut ValidationState) -> Result<bool> {
-        //self.validation_state = ValidationState::new();
-        
+    pub fn validate(&self, validation_state: &mut ValidationState) -> Result<bool> { 
         let openid_scope = "openid";
         if !self.request.has_scope(openid_scope) {
             validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));

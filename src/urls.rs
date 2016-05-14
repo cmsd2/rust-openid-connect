@@ -5,21 +5,17 @@ use iron::modifier::Modifier;
 use iron::headers;
 use url;
 
-use result::{Result, OpenIdConnectError};
+use result::Result;
 use site_config::*;
 use x_headers::*;
 
 pub fn get_forwarded_proto<'a>(req: &'a mut Request) -> Result<Option<&'a str>> {
-    let site_config = try!(SiteConfig::get(req));
-    
     let maybe_proto: Option<&XForwardedProto> = req.headers.get::<XForwardedProto>();
     
     Ok(maybe_proto.map(|p| &p.forwarded_proto[..]))
 }
 
 pub fn get_forwarded_port(req: &mut Request) -> Result<Option<u16>> {
-    let site_config = try!(SiteConfig::get(req));
-    
     let maybe_port: Option<&XForwardedPort> = req.headers.get::<XForwardedPort>();
     
     Ok(maybe_port.map(|p| p.forwarded_port))
