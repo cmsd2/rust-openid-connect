@@ -10,27 +10,9 @@ use rbvt::params::*;
 use rbvt::result::*;
 use rbvt::state::*;
 use rbvt::builder::*;
-use oauth2::models::tokens::{Token, TokenType};
-use authentication;
-use jsonwebtoken::json::*;
-use jsonwebtoken::jwt::*;
-use jsonwebtoken::crypto::mac_signer::*;
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum GrantType {
-    AuthorizationCode,
-    ClientCredentials,
-}
-
-impl GrantType {
-    pub fn from_str(s: &str) -> Result<GrantType> {
-        match s {
-            "authorization_code" => Ok(GrantType::AuthorizationCode),
-            "client_credentials" => Ok(GrantType::ClientCredentials),
-            _ => Err(OpenIdConnectError::UnknownGrantType(Box::new(s.to_owned())))
-        }
-    }
-}
+use config::*;
+use oauth2::models::*;
+use grant_type::*;
 
 #[derive(Clone, Debug)]
 pub struct TokenRequest {
@@ -150,29 +132,26 @@ pub struct TokenErrorResponse;
 /// on error render error response
 pub fn token_post_handler(req: &mut Request) -> IronResult<Response> {
     debug!("/token");
+    let config = try!(Config::get(req));
     
     let token_request = try!(TokenRequestBuilder::build_from_request(req));
     debug!("token request: {:?}", token_request);
     
-    //TODO move this all somewhere else 
-    let mut jwt = Jwt::default();
-    jwt.claims.set_value("iss", &"roidc");
-    jwt.claims.set_value("nonce", &authentication::new_nonce());
-    
-    let signer = try!(MacSigner::new("secret").map_err(OpenIdConnectError::from));
-    
-    let id_token = try!(jwt.encode(&signer).map_err(OpenIdConnectError::from));
-    
-    let token = Token {
-        access_token: authentication::new_secret(),
-        token_type: TokenType::Bearer,
-        refresh_token: None,
-        expires_in: 3600,
-        id_token: Some(id_token),
-    };
-    
-    debug!("token response: {:?}", token);
-    
-    Ok(Response::with((status::Ok, try!(serde_json::to_string(&token).map_err(OpenIdConnectError::from)))))
+    match token_request.grant_type {
+        GrantType::AuthorizationCode => {
+            if let Some(ref code) = token_request.code {
+                let token = try!(config.token_repo.exchange_auth_code(req, code));
+            
+                debug!("token response: {:?}", token);
+            
+                Ok(Response::with((status::Ok, try!(serde_json::to_string(&token).map_err(OpenIdConnectError::from)))))
+            } else {
+                Err(OpenIdConnectError::AuthCodeError.into())
+            }
+        },
+        GrantType::ClientCredentials => {
+            unimplemented!()
+        }
+    }
 }
 

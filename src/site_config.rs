@@ -82,13 +82,28 @@ impl Deref for TokenDuration {
 pub struct SiteConfig {
     pub token_issuer: Option<String>, // token iss claim
     pub token_duration: Option<TokenDuration>,
+    pub code_duration: Option<TokenDuration>,
     pub listen_host: Option<String>, // ip address to listen on. default 0.0.0.0
     pub listen_port: Option<u16>, // port to listen on. default 8080
-    // #[serde(serialize_with="SerializeWith::serialize_with",deserialize_with="DeserializeWith::deserialize_with")]
     pub base_url: Option<SiteUrl>, // default base url for constructing absolute urls
     pub use_x_forwarded_proto: bool, // override base_url protocol with x-forwarded-proto header
     pub use_x_forwarded_port: bool, // override base_url port with x-forwarded-port header
     // other stuff like key sets, timeouts, policies etc
+}
+
+impl Default for SiteConfig {
+    fn default() -> SiteConfig {
+        SiteConfig {
+            token_issuer: None,
+            token_duration: None,
+            code_duration: None,
+            listen_host: None,
+            listen_port: None,
+            base_url: None,
+            use_x_forwarded_proto: true,
+            use_x_forwarded_port: true,
+        }
+    }
 }
 
 impl SiteConfig {
@@ -124,22 +139,12 @@ impl SiteConfig {
         self.token_duration.as_ref().map(|d| d.to_owned()).unwrap_or(Duration::hours(24).into()).into()
     }
     
+    pub fn get_code_duration(&self) -> Duration {
+        self.code_duration.as_ref().map(|d| d.to_owned()).unwrap_or(Duration::minutes(10).into()).into()
+    }
+    
     pub fn get(req: &mut Request) -> result::Result<Arc<SiteConfig>> {
         req.get::<persistent::Read<SiteConfig>>().map_err(OpenIdConnectError::from)
-    }
-}
-
-impl Default for SiteConfig {
-    fn default() -> SiteConfig {
-        SiteConfig {
-            token_issuer: None,
-            token_duration: None,
-            listen_host: None,
-            listen_port: None,
-            base_url: None,
-            use_x_forwarded_proto: true,
-            use_x_forwarded_port: true,
-        }
     }
 }
 

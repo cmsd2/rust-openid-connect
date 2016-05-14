@@ -2,6 +2,8 @@ use std::fmt::{self, Display, Formatter};
 
 use serde;
 use serde::de::Deserialize;
+use chrono::*;
+use site_config::*;
 
 #[derive(Copy, Clone, Debug)]
 pub enum TokenType {
@@ -54,6 +56,18 @@ pub struct Token {
     pub access_token: String,
     pub token_type: TokenType,
     pub refresh_token: Option<String>,
-    pub expires_in: u32,
+    pub expires_in: TokenDuration,
     pub id_token: Option<String>,
+}
+
+impl Token {
+    pub fn new(access_token: String, refresh_token: Option<String>, expires_in: Duration, id_token: Option<String>) -> Token {
+        Token {
+            access_token: access_token,
+            token_type: TokenType::Bearer,
+            refresh_token: refresh_token,
+            expires_in: expires_in.into(),
+            id_token: id_token,
+        }
+    }
 }

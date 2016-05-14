@@ -16,7 +16,7 @@ use config::Config;
 use view::View;
 use back::*;
 use sessions::UserSession;
-use oauth2::routes::authorize::{AuthorizeRequest, AuthorizeRequestState, auth_redirect_url};
+use oauth2::routes::authorize::auth_redirect_url;
 use oauth2::models::*;
 use oauth2::repos::*;
 

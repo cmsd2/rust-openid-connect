@@ -45,6 +45,7 @@ pub mod serialisation;
 pub mod response_mode;
 pub mod site_config;
 pub mod x_headers;
+pub mod grant_type;
 
 
 #[cfg(test)]

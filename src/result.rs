@@ -189,6 +189,11 @@ quick_error! {
             description("date error")
             display("date error")
         }
+        
+        AuthCodeError {
+            description("the auth code was invalid")
+            display("the auth code was invalid")
+        }
     }
 }
 
