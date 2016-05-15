@@ -12,6 +12,7 @@ use rbvt;
 use url;
 use persistent;
 use jsonwebtoken::result::*;
+use grant_type::*;
 
 quick_error! {
     #[derive(Debug)]
@@ -36,6 +37,11 @@ quick_error! {
         UnknownGrantType(grant_type: Box<String>) {
             description("unknown grant_type")
             display("Unknown grant_type: {}", grant_type.as_ref())
+        }
+        
+        UnsupportedGrantType(grant_type: GrantType) {
+            description("unsupported grant_type")
+            display("Unsupported grant_type: {}", grant_type)
         }
         
         ScopeNotFound(scope: Box<String>) {

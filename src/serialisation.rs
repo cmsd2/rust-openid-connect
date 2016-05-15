@@ -7,9 +7,8 @@ use iron::Url;
 
 use result::OpenIdConnectError;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct UTCDateTime {
-    #[serde(serialize_with="SerializeWith::serialize_with",deserialize_with="DeserializeWith::deserialize_with")]
     date_time: DateTime<UTC>,
 }
 
@@ -38,6 +37,24 @@ impl Deref for UTCDateTime {
     
     fn deref(&self) -> &DateTime<UTC> {
         &self.date_time
+    }
+}
+
+impl serde::ser::Serialize for UTCDateTime {
+        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+        where S: serde::Serializer,
+    {
+        self.date_time.serialize_with(serializer)
+    }
+}
+
+impl serde::de::Deserialize for UTCDateTime {
+        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<UTCDateTime, D::Error>
+        where D: serde::de::Deserializer
+    {
+        let date_time: DateTime<UTC> = try!(DeserializeWith::deserialize_with(deserializer));
+        
+        Ok(UTCDateTime::new(date_time))
     }
 }
 

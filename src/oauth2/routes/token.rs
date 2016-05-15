@@ -11,6 +11,7 @@ use rbvt::result::*;
 use rbvt::state::*;
 use rbvt::builder::*;
 use config::*;
+use site_config::*;
 use oauth2::models::*;
 use grant_type::*;
 
@@ -133,25 +134,30 @@ pub struct TokenErrorResponse;
 pub fn token_post_handler(req: &mut Request) -> IronResult<Response> {
     debug!("/token");
     let config = try!(Config::get(req));
+    let site_config = try!(SiteConfig::get(req));
     
     let token_request = try!(TokenRequestBuilder::build_from_request(req));
     debug!("token request: {:?}", token_request);
     
-    match token_request.grant_type {
-        GrantType::AuthorizationCode => {
-            if let Some(ref code) = token_request.code {
-                let token = try!(config.token_repo.exchange_auth_code(req, code));
+    if site_config.grant_enabled(token_request.grant_type) {
+        match token_request.grant_type {
+            GrantType::AuthorizationCode => {
+                if let Some(ref code) = token_request.code {
+                    let token = try!(config.token_repo.exchange_auth_code(req, code));
             
-                debug!("token response: {:?}", token);
+                    debug!("token response: {:?}", token);
             
-                Ok(Response::with((status::Ok, try!(serde_json::to_string(&token).map_err(OpenIdConnectError::from)))))
-            } else {
-                Err(OpenIdConnectError::AuthCodeError.into())
+                    Ok(Response::with((status::Ok, try!(serde_json::to_string(&token).map_err(OpenIdConnectError::from)))))
+                } else {
+                    Err(OpenIdConnectError::AuthCodeError.into())
+                }
+            },
+            GrantType::ClientCredentials => {
+                unimplemented!()
             }
-        },
-        GrantType::ClientCredentials => {
-            unimplemented!()
         }
+    } else {
+        Err(OpenIdConnectError::UnsupportedGrantType(GrantType::AuthorizationCode).into())
     }
 }
 

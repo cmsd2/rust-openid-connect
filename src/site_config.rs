@@ -1,7 +1,9 @@
+use std;
 use std::borrow::Cow;
 use std::sync::Arc;
 use std::ops::Deref;
 
+use serde;
 use chrono::*;
 use iron::prelude::*;
 use iron::typemap;
@@ -11,10 +13,10 @@ use persistent;
 use result;
 use result::{OpenIdConnectError};
 use serialisation::*;
+use grant_type::*;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct SiteUrl {
-    #[serde(serialize_with="SerializeWith::serialize_with", deserialize_with="DeserializeWith::deserialize_with")]
     pub url: Url
 }
 
@@ -45,9 +47,26 @@ impl From<Url> for SiteUrl {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+impl serde::ser::Serialize for SiteUrl {
+        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+        where S: serde::Serializer,
+    {
+        self.url.serialize_with(serializer)
+    }
+}
+
+impl serde::de::Deserialize for SiteUrl {
+        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<SiteUrl, D::Error>
+        where D: serde::de::Deserializer
+    {
+        let url: Url = try!(DeserializeWith::deserialize_with(deserializer));
+        
+        Ok(SiteUrl::new(url))
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct TokenDuration {
-    #[serde(serialize_with="SerializeWith::serialize_with", deserialize_with="DeserializeWith::deserialize_with")]
     pub duration: Duration,
 }
 
@@ -78,6 +97,24 @@ impl Deref for TokenDuration {
     }
 }
 
+impl serde::ser::Serialize for TokenDuration {
+        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+        where S: serde::Serializer,
+    {
+        self.duration.serialize_with(serializer)
+    }
+}
+
+impl serde::de::Deserialize for TokenDuration {
+        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<TokenDuration, D::Error>
+        where D: serde::de::Deserializer
+    {
+        let duration: Duration = try!(DeserializeWith::deserialize_with(deserializer));
+        
+        Ok(TokenDuration::new(duration))
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SiteConfig {
     pub token_issuer: Option<String>, // token iss claim
@@ -89,6 +126,8 @@ pub struct SiteConfig {
     pub use_x_forwarded_proto: bool, // override base_url protocol with x-forwarded-proto header
     pub use_x_forwarded_port: bool, // override base_url port with x-forwarded-port header
     // other stuff like key sets, timeouts, policies etc
+    pub enable_oauth2: bool, // access tokens and refresh tokens without openid. if false, scope must include "openid".
+    pub enabled_grants: Vec<GrantType>, // permitted grant types (authorization_code, client_credentials, ...)
 }
 
 impl Default for SiteConfig {
@@ -102,6 +141,8 @@ impl Default for SiteConfig {
             base_url: None,
             use_x_forwarded_proto: true,
             use_x_forwarded_port: true,
+            enable_oauth2: true,
+            enabled_grants: vec![GrantType::AuthorizationCode, GrantType::ClientCredentials],
         }
     }
 }
@@ -145,6 +186,10 @@ impl SiteConfig {
     
     pub fn get(req: &mut Request) -> result::Result<Arc<SiteConfig>> {
         req.get::<persistent::Read<SiteConfig>>().map_err(OpenIdConnectError::from)
+    }
+    
+    pub fn grant_enabled(&self, grant_type: GrantType) -> bool {
+        self.enabled_grants.contains(&grant_type)
     }
 }
 

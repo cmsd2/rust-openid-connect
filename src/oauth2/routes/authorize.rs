@@ -6,8 +6,6 @@ use plugin::Pluggable;
 use plugin::Plugin as PluginPlugin;
 use url;
 
-use jsonwebtoken::jwt::*;
-use jsonwebtoken::header::*;
 use back::*;
 use result::{Result, OpenIdConnectError};
 use urls::*;
@@ -37,31 +35,9 @@ pub fn auth_return_to_client_url(req: &mut Request, user_id: &str, authorize_req
     let base_uri = &authorize_request.redirect_uri;
     let mut uri = try!(url::Url::parse(base_uri));
     
-    //let mut query_pairs = uri.query_pairs_mut();
-    let mut query_pairs = vec![];
-    // query_pairs.clear();
+    let token = try!(config.token_repo.create_code_token(req, user_id, authorize_request));
     
-    //TODO generate real tokens
-    
-    if authorize_request.response_type.code {
-        // query_pairs.append_pair("code", "blah");
-        query_pairs.push(("code".to_owned(), "blah".to_owned()));
-    }
-    
-    if authorize_request.response_type.id_token {
-        let claims = try!(config.token_repo.get_user_claims(req, user_id, &authorize_request.client_id, &authorize_request.scopes));
-        let id_token = Jwt::new(Header::default(), claims); //TODO use RSA
-        query_pairs.push(("id_token".to_owned(), try!(id_token.encode(&config.mac_signer))));
-    }
-    
-    if authorize_request.response_type.token {
-        // query_pairs.append_pair("token", "blah");
-        query_pairs.push(("token".to_owned(), "blah".to_owned()));
-    }
-    
-    if let Some(ref state) = authorize_request.state {
-        query_pairs.push(("state".to_owned(), state.to_owned()));
-    } 
+    let query_pairs = token.query_pairs();
     
     if ResponseMode::Query == authorize_request.response_mode.unwrap_or(
             ResponseMode::default_for_response_type(authorize_request.response_type)) {

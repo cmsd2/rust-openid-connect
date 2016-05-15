@@ -16,6 +16,7 @@ use rbvt::result::ValidationError;
 use response_type::ResponseType;
 use response_mode::*;
 use config::Config;
+use site_config::*;
 use oauth2::{ClientApplication, ClientApplicationRepo};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -42,10 +43,14 @@ impl AuthorizeRequestState {
         }
     }
     
-    pub fn validate(&self, validation_state: &mut ValidationState) -> Result<bool> { 
-        let openid_scope = "openid";
-        if !self.request.has_scope(openid_scope) {
-            validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));
+    pub fn validate(&self, req: &mut Request, validation_state: &mut ValidationState) -> Result<bool> {
+        let site_config = try!(SiteConfig::get(req));
+        
+        if site_config.enable_oauth2 == false {
+            let openid_scope = "openid";
+            if !self.request.has_scope(openid_scope) {
+                validation_state.reject("scope", ValidationError::MissingRequiredValue("scope: openid".to_owned()));
+            }
         }
         
         if let Some(ref client) = self.client {
@@ -92,7 +97,7 @@ impl AuthorizeRequestState {
         
         let mut validation_state = ValidationState::new();
         
-        if ! try!(auth_req_state.validate(&mut validation_state)) {
+        if ! try!(auth_req_state.validate(req, &mut validation_state)) {
             return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(validation_state)));
         }
     
