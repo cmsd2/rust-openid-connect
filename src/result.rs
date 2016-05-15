@@ -2,6 +2,7 @@ use std::result;
 use std::io;
 use std::num;
 
+use rustc_serialize::base64::FromBase64Error;
 use iron::prelude::*;
 use iron::status;
 use urlencoded;
@@ -199,6 +200,13 @@ quick_error! {
         AuthCodeError {
             description("the auth code was invalid")
             display("the auth code was invalid")
+        }
+        
+        Base64Error(e: FromBase64Error) {
+            from()
+            description("error deserialising base64")
+            display("Error deserialising base64")
+            cause(e)
         }
     }
 }

@@ -5,9 +5,11 @@ use chrono::*;
 use iron::prelude::*;
 use oauth2::repos::GrantRepo;
 use users::UserRepo;
+use rustc_serialize::base64::{ToBase64, FromBase64, URL_SAFE};
 use jsonwebtoken::jwt::*;
 use jsonwebtoken::json::*;
 use jsonwebtoken::header::*;
+use jsonwebtoken::signer::*;
 use result::*;
 use site_config::*;
 use config::*;
@@ -21,7 +23,6 @@ pub trait TokenRepo where Self: Send + Sync  {
     fn create_auth_code(&self, req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest) -> Result<Token>;
     
     // token provider stuff
-    fn create_id_token(&self, req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest) -> Result<String>;
     fn create_code_token(&self, req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest) -> Result<Token>;
     fn create_auth_token(&self, req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest, code_token: Token) -> Result<Token>;
 
@@ -83,17 +84,26 @@ impl InMemoryTokenRepo {
             auth_entries: Arc::new(Mutex::new(vec![])),
         }
     }
-}
-
-impl TokenRepo for InMemoryTokenRepo {
-    fn get_user_claims(&self, req: &mut Request, user_id: &str, client_id: &str, _scopes: &[String]) -> Result<JwtClaims> {
+    
+    /// Hashes an access_token or code using the JWA algorithm specified in the header, 
+    /// truncates the hash to half its length, and returns the base64url encoding
+    pub fn half_hash_value(config: Arc<Config>, header: &Header, value: &str) -> Result<String> {
+        let hash = try!(config.mac_signer.sign(header, value.as_bytes()));
+        
+        let bytes = try!(hash.from_base64());
+        
+        let half_bytes = &bytes[0..(bytes.len()/2)];
+        
+        let half_hash = half_bytes.to_base64(URL_SAFE);
+        
+        Ok(half_hash)
+    }
+    
+    fn get_basic_claims(req: &mut Request, user_id: &str, client_id: &str, duration: Duration) -> Result<JwtClaims> {
         let site_config = try!(SiteConfig::get(req));
         
-        let maybe_user = try!(self.user_repo.get_user(user_id));
-        let user = try!(maybe_user.ok_or(OpenIdConnectError::UserNotFound));
-        
         let now = UTCDateTime::new(UTC::now());
-        let later = UTCDateTime::new(try!(now.checked_add(site_config.get_token_duration()).ok_or(OpenIdConnectError::DateError)));
+        let later = UTCDateTime::new(try!(now.checked_add(duration).ok_or(OpenIdConnectError::DateError)));
         
         let mut claims = JwtClaims::new();
         
@@ -104,6 +114,35 @@ impl TokenRepo for InMemoryTokenRepo {
         claims.set_value("exp", &later);
         claims.set_value("nbf", &now);
         claims.set_value("iat", &now);
+        
+        Ok(claims)
+    }
+    
+    pub fn create_access_token(req: &mut Request, user_id: &str, client_id: &str) -> Result<String> {
+        let site_config = try!(SiteConfig::get(req));
+        let config = try!(Config::get(req));
+        
+        let duration = site_config.get_token_duration();
+        
+        let header = Header::default();
+        let claims = try!(Self::get_basic_claims(req, user_id, client_id, duration));
+        
+        let jwt = Jwt::new(header, claims);
+        jwt.encode(&config.mac_signer).map_err(OpenIdConnectError::from)
+    }
+}
+
+impl TokenRepo for InMemoryTokenRepo {    
+    fn get_user_claims(&self, req: &mut Request, user_id: &str, client_id: &str, _scopes: &[String]) -> Result<JwtClaims> {
+        let site_config = try!(SiteConfig::get(req));
+        let duration = site_config.get_token_duration();
+        
+        let maybe_user = try!(self.user_repo.get_user(user_id));
+        let user = try!(maybe_user.ok_or(OpenIdConnectError::UserNotFound));
+        
+
+        let mut claims = try!(Self::get_basic_claims(req, user_id, client_id, duration));
+        
         claims.set_value("name", &user.username);
         //TODO more claims
         
@@ -129,16 +168,10 @@ impl TokenRepo for InMemoryTokenRepo {
         Ok(token)
     }
     
-    fn create_id_token(&self, req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest) -> Result<String> {
-        let config = try!(Config::get(req));
-        let claims = try!(self.get_user_claims(req, user_id, &authorize_request.client_id, &authorize_request.scopes));
-        let jwt = Jwt::new(Header::default(), claims);
-        jwt.encode(&config.mac_signer).map_err(OpenIdConnectError::from)
-    }
-    
     /// Called from /authorize to create a code in the Authorization Code flow and hybrid flows,
     /// and token and id_token in the implicit and hybrid flows.
     fn create_code_token(&self, req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest) -> Result<Token> {
+        let config = try!(Config::get(req));
         let site_config = try!(SiteConfig::get(req));
         let expires_in = site_config.get_code_duration().into(); //TODO one expires_in for both code and token??
         let state = authorize_request.state.clone();
@@ -150,7 +183,7 @@ impl TokenRepo for InMemoryTokenRepo {
         };
         
         let access_token = if authorize_request.response_type.code || authorize_request.response_type.token {
-            Some(authentication::new_token())
+            Some(try!(Self::create_access_token(req, user_id, &authorize_request.client_id)))
         } else {
             None
         };
@@ -163,7 +196,16 @@ impl TokenRepo for InMemoryTokenRepo {
         };
         
         let id_token = if authorize_request.response_type.id_token {
-            Some(try!(self.create_id_token(req, user_id, authorize_request)))
+            let header = Header::default();
+            let mut claims = try!(self.get_user_claims(req, user_id, &authorize_request.client_id, &authorize_request.scopes));
+            if let Some(ref at) = access_token {
+                claims.set_value("at_hash", &try!(Self::half_hash_value(config.clone(), &header, at)));
+            }
+            if let Some(ref c) = code {
+                claims.set_value("c_hash", &try!(Self::half_hash_value(config.clone(), &header, c)));
+            }
+            let jwt = Jwt::new(header, claims);
+            Some(try!(jwt.encode(&config.mac_signer).map_err(OpenIdConnectError::from)))
         } else {
             None
         };
@@ -176,20 +218,26 @@ impl TokenRepo for InMemoryTokenRepo {
     /// Called from /token to exchange a code for a token and id_token 
     /// in the Authorization Code flow and hybrid flow.
     fn create_auth_token(&self, req: &mut Request, user_id: &str, authorize_request: &AuthorizeRequest, code_token: Token) -> Result<Token> {
+        let config = try!(Config::get(req));
         let site_config = try!(SiteConfig::get(req));
-        let expires_in = site_config.get_token_duration().into();
+        let expires_in = site_config.get_token_duration();
         let state = authorize_request.state.clone();
         let code = None;
-        let access_token = code_token.access_token.or_else(|| Some(authentication::new_token()));
+        let access_token = try!(code_token.access_token.map(|at| Ok(at)).or_else(|| Some(Self::create_access_token(req, user_id, &authorize_request.client_id))).unwrap());
         let refresh_token = code_token.refresh_token.or_else(|| Some(authentication::new_token()));
         
         let id_token = if authorize_request.scopes.contains(&"openid".to_owned()) {
-            Some(try!(self.create_id_token(req, user_id, authorize_request)))
+            let header = Header::default();
+            let mut claims = try!(self.get_user_claims(req, user_id, &authorize_request.client_id, &authorize_request.scopes));
+            claims.set_value("at_hash", &try!(Self::half_hash_value(config.clone(), &header, &access_token)));
+
+            let jwt = Jwt::new(header, claims);
+            Some(try!(jwt.encode(&config.mac_signer).map_err(OpenIdConnectError::from)))
         } else {
             None
         };
         
-        let token = Token::new(code, access_token, refresh_token, expires_in, id_token, state);
+        let token = Token::new(code, Some(access_token), refresh_token, expires_in.into(), id_token, state);
         
         Ok(token)
     }
