@@ -123,6 +123,8 @@ pub fn main() {
     //TODO load site config from file
     site_config.token_issuer = Some("http://localhost:3000".to_owned()); // should be https
     
+    let woidc = openid_config::WellKnownOpenIdConfiguration::new_for_site(&site_config);
+    
     // html content type;
     // html error pages
     // urlencoded_form accept type?
@@ -220,7 +222,6 @@ pub fn main() {
     outer_chain.link_after(logger_after);
     outer_chain.link_after(ErrorRenderer);
     
-    let woidc = openid_config::WellKnownOpenIdConfiguration::new();
     outer_chain.link(persistent::Read::<openid_config::WellKnownOpenIdConfiguration>::both(woidc));
     
     outer_chain.link(persistent::Read::<Config>::both(config));

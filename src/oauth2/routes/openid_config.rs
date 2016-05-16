@@ -8,6 +8,7 @@ use persistent;
 use serde_json;
 
 use result::*;
+use site_config::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WellKnownOpenIdConfiguration {
@@ -17,7 +18,10 @@ pub struct WellKnownOpenIdConfiguration {
     pub userinfo_endpoint: Option<String>,
     pub revocation_endpoint: Option<String>,
     pub jwks_uri: Option<String>,
+    pub registration_endpoint: Option<String>,
     pub response_types_supported: Vec<String>,
+    pub response_modes_supported: Vec<String>,
+    pub grant_types_supported: Vec<String>,
     pub subject_types_supported: Vec<String>,
     pub id_token_signing_alg_values_supported: Vec<String>,
     pub scopes_supported: Vec<String>,
@@ -35,7 +39,10 @@ impl WellKnownOpenIdConfiguration {
             userinfo_endpoint: None,
             revocation_endpoint: None,
             jwks_uri: None,
+            registration_endpoint: None,
             response_types_supported: vec![],
+            response_modes_supported: vec![],
+            grant_types_supported: vec![],
             subject_types_supported: vec![],
             id_token_signing_alg_values_supported: vec![],
             scopes_supported: vec![],
@@ -43,6 +50,39 @@ impl WellKnownOpenIdConfiguration {
             claims_supported: vec![],
             code_challenge_methods_supported: vec![],
         }
+    }
+    
+    pub fn new_for_site(site_config: &SiteConfig) -> WellKnownOpenIdConfiguration {
+        let mut c = WellKnownOpenIdConfiguration::new();
+        if let Some(ref issuer) = site_config.token_issuer {
+            c.issuer = Some(issuer.to_owned());
+            c.authorization_endpoint = Some(format!("{}/authorize", issuer));
+            c.token_endpoint = Some(format!("{}/token", issuer));
+            c.userinfo_endpoint = Some(format!("{}/userinfo", issuer));
+            c.jwks_uri = Some(format!("{}/jwks", issuer));
+            c.response_types_supported = vec![
+                "none".to_owned(),
+                "code".to_owned(),
+                "token".to_owned(),
+                "id_token".to_owned(),
+                "code token".to_owned(),
+                "code id_token".to_owned(),
+                "token id_token".to_owned(),
+                "code token id_token".to_owned(),
+            ];
+            c.response_modes_supported = vec![
+                "query".to_owned(),
+                "fragment".to_owned(),
+            ];
+            c.grant_types_supported = vec![
+                "authorization_code".to_owned(),
+                "implicit".to_owned(),
+            ];
+            c.id_token_signing_alg_values_supported = vec!["HS256".to_owned()]; // must include rs256
+            c.scopes_supported = vec!["openid".to_owned()];
+            c.subject_types_supported = vec!["pairwise".to_owned(), "public".to_owned()];
+        }
+        c
     }
     
     pub fn get(req: &mut Request) -> Result<Arc<WellKnownOpenIdConfiguration>> {
