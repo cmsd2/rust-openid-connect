@@ -158,6 +158,11 @@ quick_error! {
             display("Invalid username or password")
         }
         
+        ConfigError(msg: String) {
+            description("server config error")
+            display("server config error: {}", msg)
+        }
+        
         NoSessionLoaded {
             description("server didn't load user session")
             display("server didn't load user session")

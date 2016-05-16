@@ -119,7 +119,9 @@ pub fn main() {
     
     let config = Config::new(mac_signer, user_repo.clone(), application_repo.clone(), grant_repo.clone(), token_repo.clone(), sessions_controller.clone());
     
-    let site_config = SiteConfig::new();
+    let mut site_config = SiteConfig::new();
+    //TODO load site config from file
+    site_config.token_issuer = Some("http://localhost:3000".to_owned()); // should be https
     
     // html content type;
     // html error pages
@@ -156,7 +158,6 @@ pub fn main() {
     
     
     let mut router = Router::new();
-//    router.get("/.well-known/)
     router.get("/authorize", web_handler(&config, oauth2::authorize_handler));
     router.get("/complete", web_handler(&config, oauth2::complete_handler));
     router.get("/", web_handler(&config, home_handler));
@@ -198,6 +199,7 @@ pub fn main() {
     
     let mut well_known_router = Router::new();
     well_known_router.get("/openid-configuration", api_handler(&config, oauth2::openid_config_get_handler));
+    well_known_router.get("/webfinger", api_handler(&config, oauth2::webfinger_get_handler));
     
     let mut mount = Mount::new();
     mount.mount("/", router);

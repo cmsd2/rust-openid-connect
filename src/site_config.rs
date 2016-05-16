@@ -117,9 +117,9 @@ impl serde::de::Deserialize for TokenDuration {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SiteConfig {
-    pub token_issuer: Option<String>, // token iss claim
-    pub token_duration: Option<TokenDuration>,
-    pub code_duration: Option<TokenDuration>,
+    pub token_issuer: Option<String>, // token iss claim and webfinger issuer link e.g. https://example.com:8080
+    pub token_duration: Option<TokenDuration>, // shortish. hours not days.
+    pub code_duration: Option<TokenDuration>, // quite short. 10 minutes max.
     pub listen_host: Option<String>, // ip address to listen on. default 0.0.0.0
     pub listen_port: Option<u16>, // port to listen on. default 8080
     pub base_url: Option<SiteUrl>, // default base url for constructing absolute urls
