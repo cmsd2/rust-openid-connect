@@ -57,14 +57,18 @@ pub fn load_token(req: &mut Request, params: &HashMap<String, Vec<String>>, toke
     let return_str = try!(multimap_get_maybe_one(params, token_param_name));
     
     if let Some(return_str) = return_str {
-        let token = try!(Jwt::decode(&return_str, &config.mac_signer));
+        if !return_str.is_empty() {
+            let token = try!(Jwt::decode(&return_str, &config.mac_signer));
         
-        let mut v = claims_verifier::<JwtClaims>();
-        let valid = try!(v.validate(&token.claims));
-        if valid {
-            Ok(Some(token))
+            let mut v = claims_verifier::<JwtClaims>();
+            let valid = try!(v.validate(&token.claims));
+            if valid {
+                Ok(Some(token))
+            } else {
+                Err(OpenIdConnectError::RoutingError(format!("token is not valid: {:?}", v.state)))
+            }
         } else {
-            Err(OpenIdConnectError::RoutingError(format!("token is not valid: {:?}", v.state)))
+            Ok(None)
         }
     } else {
         Ok(None)
