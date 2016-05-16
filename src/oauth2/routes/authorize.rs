@@ -117,15 +117,14 @@ pub fn complete_handler(req: &mut Request) -> IronResult<Response> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use oauth2::models::client::*;
+    use oauth2::models::*;
     use serde_json;
     use response_type::*;
     
     #[test]
-    fn test_client_app_is_not_serialised() {
-        let mut auth = AuthorizeRequest::new(ResponseType::new(false, false, false), "client_id#1234567".to_owned(), "redirect_uri#oob".to_owned());
-        auth.client = Some(ClientApplication::new("id#foo".to_owned(), Some("secret#bar".to_owned())));
-        
+    fn test_auth_serialisation() {
+        let auth = AuthorizeRequest::new(ResponseType::new(false, false, false), "client_id#1234567".to_owned(), "redirect_uri#oob".to_owned());
+
         let s = serde_json::to_string(&auth).unwrap();
         
         assert!(s.find("1234567").is_some());
@@ -134,12 +133,11 @@ mod test {
     }
     
     #[test]
-    fn test_client_app_is_not_deserialised() {
+    fn test_auth_deserialisation() {
         let js = r#"{"response_type":"none", "client_id":"foo", "redirect_uri":"oob", "scopes": ["openid"], "client":{"client_id":"1234567","secret":"bar"}}"#;
         
         let auth = serde_json::from_str::<AuthorizeRequest>(js).unwrap();
         
         assert_eq!(auth.client_id, "foo");
-        assert!(auth.client.is_none());
     }
 }
