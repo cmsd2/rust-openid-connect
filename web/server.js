@@ -19,7 +19,7 @@ var proxiedRoutes = [
       '^/applications',
       '^/grants',
       '^/identity',
-      '^/.well-known/openid-configuration',
+      '^/.well-known/',
       '^/$'
     ];
     
