@@ -15,17 +15,17 @@ use sessions::UserSession;
 use oauth2::models::authorize_request::*;
 
 pub fn auth_redirect_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    redirect_forwards_url(req, "/authorize", path, authorize_request.to_params())
+    redirect_forwards_url(req, "/connect/authorize", path, authorize_request.to_params())
 }
 
 pub fn auth_consent_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    let path = "/consent";
+    let path = "/connect/consent";
     
     relative_url(req, path, Some(authorize_request.to_params()))
 }
 
 pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    let path = "/complete";
+    let path = "/connect/complete";
     
     relative_url(req, path, Some(authorize_request.to_params()))
 }
@@ -67,7 +67,7 @@ pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
 /// otherwise redirect to completion url
 /// on error either render error or return error response to RP via redirect
 pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
-    debug!("/authorize");
+    debug!("/connect/authorize");
     let authorize_request = try!(AuthorizeRequestState::load_from_query(req));
     debug!("authorize: {:?}", authorize_request);
     
@@ -95,7 +95,7 @@ pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
 /// otherwise redirect to redirect_uri with code or id_token depending on flow
 /// on error either render error or return error response to RP via redirect
 pub fn complete_handler(req: &mut Request) -> IronResult<Response> {
-    debug!("/complete");
+    debug!("/connect/complete");
     let authorize_request = try!(AuthorizeRequestState::load_from_query(req));
     debug!("complete: {:?}", authorize_request);
     

@@ -5,7 +5,8 @@ use bodyparser;
 use config::Config;
 use result::*;
 use helpers::*;
-use oauth2::*;
+use oauth2::models::*;
+use oauth2::repos::*;
 
 use serde_json;
 

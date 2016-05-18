@@ -22,14 +22,11 @@ use std::path::Path;
 
 use iron::prelude::*;
 use iron::{AfterMiddleware};
-use iron::middleware::Handler;
-use iron::mime::Mime;
 use mount::Mount;
 use staticfile::Static;
 use router::Router;
 use logger::Logger;
 use logger::format::Format;
-use handlebars_iron::{HandlebarsEngine, DirectorySource};
 use jsonwebtoken::crypto::mac_signer::MacSigner;
 
 use openid_connect::routes::home::*;
@@ -44,10 +41,9 @@ use openid_connect::oauth2;
 use openid_connect::oauth2::routes::openid_config;
 use openid_connect::oauth2::models::client::*;
 use openid_connect::sessions;
-use openid_connect::service;
 use openid_connect::login_manager;
-use openid_connect::result::OpenIdConnectError;
 use openid_connect::site_config::*;
+use openid_connect::oauth2::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -66,30 +62,6 @@ impl AfterMiddleware for ErrorRenderer {
     }
 }
 
-struct JsonErrorRenderer;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct ErrorView {
-    error: String,
-}
-
-impl AfterMiddleware for JsonErrorRenderer {
-    /// if accept header contains */* or application/json
-    /// then render error as json object
-    /// otherwise pass error
-    fn catch(&self, _: &mut Request, err: IronError) -> IronResult<Response> {
-        debug!("{:?} caught in ErrorRecover AfterMiddleware.", &err);
-        
-        let error_view = ErrorView { error: format!("{}", err) };
-        
-        // TODO render contents of error as json object instead of string
-        let new_body = try!(serde_json::to_string(&error_view).map_err(OpenIdConnectError::from));
-        
-        let content_type = "application/json".parse::<Mime>().unwrap();
-        
-        Ok(err.response.set(new_body).set(content_type))
-    }
-}
 
 pub fn main() {
     env_logger::init().unwrap();
@@ -99,16 +71,24 @@ pub fn main() {
     let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
     user_repo.add_user(User::new("1".to_owned(), "admin".to_owned(), Some("admin".to_owned()))).unwrap();
     
-    let application_repo = Arc::new(Box::new(oauth2::InMemoryClientApplicationRepo::new()) as Box<oauth2::ClientApplicationRepo>);
+    let application_repo = Arc::new(Box::new(repos::InMemoryClientApplicationRepo::new()) as Box<repos::ClientApplicationRepo>);
+  
     let mut test_app = ClientApplicationBuilder::new();
     test_app.name = Some("Wpv WebView Client".to_owned());
     test_app.client_id = Some("wpf.webview.client".to_owned());
     test_app.redirect_uris = Some(vec!["oob://localhost/wpf.webview.client".to_owned()]);
     application_repo.create_client_application(test_app).unwrap();
+  
+    let mut test_app = ClientApplicationBuilder::new();
+    test_app.name = Some("pyoidc".to_owned());
+    test_app.client_id = Some("pyoidc".to_owned());
+    test_app.secret = Some("secret".to_owned());
+    test_app.redirect_uris = Some(vec!["oob://localhost/callback".to_owned()]);
+    application_repo.create_client_application(test_app).unwrap();
+      
+    let grant_repo = Arc::new(Box::new(repos::InMemoryGrantRepo::new()) as Box<repos::GrantRepo>);
     
-    let grant_repo = Arc::new(Box::new(oauth2::InMemoryGrantRepo::new()) as Box<oauth2::GrantRepo>);
-    
-    let token_repo = Arc::new(Box::new(oauth2::InMemoryTokenRepo::new(user_repo.clone(), grant_repo.clone())) as Box<oauth2::TokenRepo>);
+    let token_repo = Arc::new(Box::new(repos::InMemoryTokenRepo::new(user_repo.clone(), grant_repo.clone())) as Box<repos::TokenRepo>);
     
     let cookie_signing_key = b"My secret key"[..].to_owned();
     let mac_signer = MacSigner::new("secret").unwrap();
@@ -125,48 +105,11 @@ pub fn main() {
     
     let woidc = openid_config::WellKnownOpenIdConfiguration::new_for_site(&site_config);
     
-    // html content type;
-    // html error pages
-    // urlencoded_form accept type?
-    // form request forgery protection
-    // TODO move the hbse out to be reused
-    // TODO macro syntax to wrap several routes similarly
-    fn web_handler<T>(_config: &Config, route: T) -> Chain
-    where T: Handler
-    {
-        let mut hbse = HandlebarsEngine::new();
-        hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
-        if let Err(r) = hbse.reload() {
-            panic!("{:?}", r);
-        }
-  
-        let mut chain = Chain::new(route);
-        chain.link_after(hbse);
-        chain
-    }
-    
-    // json accept and content types
-    // json error page
-    // jwt validation
-    fn api_handler<T>(_config: &Config, route: T) -> Chain
-    where T: Handler
-    {
-        let mut chain = Chain::new(route);
-        
-        chain.link_after(JsonErrorRenderer);
-        
-        chain
-    }
+
     
     
     let mut router = Router::new();
-    router.get("/authorize", web_handler(&config, oauth2::authorize_handler));
-    router.get("/complete", web_handler(&config, oauth2::complete_handler));
     router.get("/", web_handler(&config, home_handler));
-    router.get("/login", web_handler(&config, service::login_get_handler));
-    router.post("/login", web_handler(&config, service::login_post_handler));
-    router.get("/consent", web_handler(&config, service::consent_get_handler));
-    router.post("/consent", web_handler(&config, service::consent_post_handler));
     router.get("/register", web_handler(&config, register_get_handler));
     router.post("/register", web_handler(&config, register_post_handler));
     
@@ -185,9 +128,7 @@ pub fn main() {
     router.post("/grants/:id", web_handler(&config, grants::grants_update_handler));
     //TODO delete
     
-    router.post("/token", api_handler(&config, oauth2::token_post_handler));
-    router.get("/userinfo", api_handler(&config, oauth2::userinfo_get_handler));
-    router.get("/identity", api_handler(&config, oauth2::identity_get_handler));
+    
     
     let mut api_router = Router::new();
     api_router.get("/session", api_handler(&config, session_get_handler));
@@ -199,14 +140,15 @@ pub fn main() {
     api_router.put("/applications/:id", api_handler(&config, applications_put_handler));
     api_router.delete("/applications/:id", api_handler(&config, applications_delete_handler));
     
-    let mut well_known_router = Router::new();
-    well_known_router.get("/openid-configuration", api_handler(&config, oauth2::openid_config_get_handler));
-    well_known_router.get("/webfinger", api_handler(&config, oauth2::webfinger_get_handler));
+    let well_known_router = oauth2::well_known_router(&config);
+    
+    let oidc_router = oauth2::oauth2_router(&config);
     
     let mut mount = Mount::new();
     mount.mount("/", router);
     mount.mount("/.well-known", well_known_router);
     mount.mount("/api", api_router);
+    mount.mount("/connect", oidc_router);
     mount.mount("/js", Static::new(Path::new("web/priv/js/")));
     mount.mount("/css", Static::new(Path::new("web/priv/css")));
     mount.mount("/images", Static::new(Path::new("web/priv/images")));

@@ -128,6 +128,7 @@ pub struct SiteConfig {
     // other stuff like key sets, timeouts, policies etc
     pub enable_oauth2: bool, // access tokens and refresh tokens without openid. if false, scope must include "openid".
     pub enabled_grants: Vec<GrantType>, // permitted grant types (authorization_code, client_credentials, ...)
+    pub enable_dynamic_client_registration: bool, // client dynamic registration endpoint
 }
 
 impl Default for SiteConfig {
@@ -143,6 +144,7 @@ impl Default for SiteConfig {
             use_x_forwarded_port: true,
             enable_oauth2: true,
             enabled_grants: vec![GrantType::AuthorizationCode, GrantType::ClientCredentials],
+            enable_dynamic_client_registration: true, // probably a bad default
         }
     }
 }

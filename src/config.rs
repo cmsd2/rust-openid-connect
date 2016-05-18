@@ -6,7 +6,7 @@ use persistent;
 
 use site_config::*;
 use users::UserRepo;
-use oauth2::{ClientApplicationRepo, GrantRepo, TokenRepo};
+use oauth2::repos::{ClientApplicationRepo, GrantRepo, TokenRepo};
 use sessions::SessionController;
 use result::*;
 use jsonwebtoken::crypto::mac_signer::MacSigner;

@@ -132,7 +132,7 @@ pub struct TokenErrorResponse;
 /// exchange code for access_token, id_token and maybe refresh_token
 /// on error render error response
 pub fn token_post_handler(req: &mut Request) -> IronResult<Response> {
-    debug!("/token");
+    debug!("/connect/token");
     let config = try!(Config::get(req));
     let site_config = try!(SiteConfig::get(req));
     

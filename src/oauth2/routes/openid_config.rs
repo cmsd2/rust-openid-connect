@@ -56,10 +56,13 @@ impl WellKnownOpenIdConfiguration {
         let mut c = WellKnownOpenIdConfiguration::new();
         if let Some(ref issuer) = site_config.token_issuer {
             c.issuer = Some(issuer.to_owned());
-            c.authorization_endpoint = Some(format!("{}/authorize", issuer));
-            c.token_endpoint = Some(format!("{}/token", issuer));
-            c.userinfo_endpoint = Some(format!("{}/userinfo", issuer));
+            c.authorization_endpoint = Some(format!("{}/connect/authorize", issuer));
+            c.token_endpoint = Some(format!("{}/connect/token", issuer));
+            c.userinfo_endpoint = Some(format!("{}/connect/userinfo", issuer));
             c.jwks_uri = Some(format!("{}/jwks", issuer));
+            if site_config.enable_dynamic_client_registration {
+                c.registration_endpoint = Some(format!("{}/connect/register", issuer));
+            }
             c.response_types_supported = vec![
                 "none".to_owned(),
                 "code".to_owned(),

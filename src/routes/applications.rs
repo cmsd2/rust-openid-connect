@@ -6,7 +6,8 @@ use serde_json::value;
 
 use config::Config;
 use result::*;
-use oauth2::*;
+use oauth2::models::*;
+use oauth2::repos::*;
 use view::View;
 use helpers::*;
 use urls::relative_url;

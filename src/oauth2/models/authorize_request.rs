@@ -17,7 +17,8 @@ use response_type::ResponseType;
 use response_mode::*;
 use config::Config;
 use site_config::*;
-use oauth2::{ClientApplication, ClientApplicationRepo};
+use oauth2::models::ClientApplication;
+use oauth2::repos::ClientApplicationRepo;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum AuthorizeStep {
