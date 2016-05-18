@@ -70,6 +70,7 @@ impl TokenRequestBuilder {
     pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<()> {
         self.grant_type = try!(multimap_get_maybe_one(params, "grant_type")).map(|s| s.to_owned()); 
         self.code = try!(multimap_get_maybe_one(params, "code")).map(|s| s.to_owned());
+        self.redirect_uri = try!(multimap_get_maybe_one(params, "redirect_uri")).map(|s| s.to_owned());
             
         Ok(())
     }

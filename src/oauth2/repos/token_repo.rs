@@ -182,18 +182,20 @@ impl TokenRepo for InMemoryTokenRepo {
             None
         };
         
-        let access_token = if authorize_request.response_type.code || authorize_request.response_type.token {
+        let access_token = if authorize_request.response_type.token {
             Some(try!(Self::create_access_token(req, user_id, &authorize_request.client_id)))
         } else {
             None
         };
         
-        // refresh tokens only allowed in Authorization Code flow and Hybrid flow
-        let refresh_token = if authorize_request.response_type.code {
-            Some(authentication::new_token())
+        let token_type = if authorize_request.response_type.token {
+            Some(TokenType::Bearer)
         } else {
             None
         };
+        
+        // refresh tokens only allowed in Authorization Code flow and Hybrid flow
+        let refresh_token = None;
         
         let id_token = if authorize_request.response_type.id_token {
             let header = Header::default();
@@ -210,7 +212,7 @@ impl TokenRepo for InMemoryTokenRepo {
             None
         };
         
-        let token = Token::new(code, access_token, refresh_token, expires_in, id_token, state);
+        let token = Token::new(code, token_type, access_token, refresh_token, expires_in, id_token, state);
         
         Ok(token)
     }
@@ -225,6 +227,7 @@ impl TokenRepo for InMemoryTokenRepo {
         let code = None;
         let access_token = try!(code_token.access_token.map(|at| Ok(at)).or_else(|| Some(Self::create_access_token(req, user_id, &authorize_request.client_id))).unwrap());
         let refresh_token = code_token.refresh_token.or_else(|| Some(authentication::new_token()));
+        let token_type = code_token.token_type.or_else(|| Some(TokenType::Bearer));
         
         let id_token = if authorize_request.scopes.contains(&"openid".to_owned()) {
             let header = Header::default();
@@ -237,7 +240,7 @@ impl TokenRepo for InMemoryTokenRepo {
             None
         };
         
-        let token = Token::new(code, Some(access_token), refresh_token, expires_in.into(), id_token, state);
+        let token = Token::new(code, token_type, Some(access_token), refresh_token, expires_in.into(), id_token, state);
         
         Ok(token)
     }

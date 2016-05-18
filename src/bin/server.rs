@@ -44,6 +44,7 @@ use openid_connect::sessions;
 use openid_connect::login_manager;
 use openid_connect::site_config::*;
 use openid_connect::oauth2::*;
+use openid_connect::service::routes::login::*;
 
 // without colours so it works on conhost terminals
 static FORMAT: &'static str =
@@ -112,7 +113,8 @@ pub fn main() {
     router.get("/", web_handler(&config, home_handler));
     router.get("/register", web_handler(&config, register_get_handler));
     router.post("/register", web_handler(&config, register_post_handler));
-    
+    router.get("/login", web_handler(&config, login_get_handler));
+    router.post("/login", web_handler(&config, login_post_handler));
     router.get("/applications", web_handler(&config, applications::applications_index_handler));
     router.get("/applications/new", web_handler(&config, applications::applications_new_handler));
     router.get("/applications/:id", web_handler(&config, applications::applications_show_handler));

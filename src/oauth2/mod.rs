@@ -56,8 +56,6 @@ pub fn oauth2_router(config: &Config) -> Router {
     let mut oidc_router = Router::new();
     oidc_router.get("/authorize", web_handler(&config, routes::authorize_handler));
     oidc_router.get("/complete", web_handler(&config, routes::complete_handler));
-    oidc_router.get("/login", web_handler(&config, routes::login_get_handler));
-    oidc_router.post("/login", web_handler(&config, routes::login_post_handler));
     oidc_router.get("/consent", web_handler(&config, routes::consent_get_handler));
     oidc_router.post("/consent", web_handler(&config, routes::consent_post_handler));
     oidc_router.post("/token", api_handler(&config, routes::token_post_handler));

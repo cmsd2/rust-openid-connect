@@ -56,7 +56,7 @@ impl serde::de::Visitor for TokenTypeVisitor {
 pub struct Token {
     pub code: Option<String>,
     pub access_token: Option<String>,
-    pub token_type: TokenType,
+    pub token_type: Option<TokenType>,
     pub refresh_token: Option<String>,
     pub expires_in: TokenDuration,
     pub id_token: Option<String>,
@@ -64,11 +64,11 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(code: Option<String>, access_token: Option<String>, refresh_token: Option<String>, expires_in: Duration, id_token: Option<String>, state: Option<String>) -> Token {
+    pub fn new(code: Option<String>, token_type: Option<TokenType>, access_token: Option<String>, refresh_token: Option<String>, expires_in: Duration, id_token: Option<String>, state: Option<String>) -> Token {
         Token {
             code: code,
             access_token: access_token,
-            token_type: TokenType::Bearer,
+            token_type: token_type,
             refresh_token: refresh_token,
             expires_in: expires_in.into(),
             id_token: id_token,
@@ -133,7 +133,7 @@ impl<'a> serde::ser::MapVisitor for TokenSerVisitor<'a> {
             try!(serializer.serialize_map_elt("id_token", id_token));
         }
         
-        if let Some(ref state) = self.0.code {
+        if let Some(ref state) = self.0.state {
             try!(serializer.serialize_map_elt("state", state));
         }
         

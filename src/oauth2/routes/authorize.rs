@@ -13,19 +13,21 @@ use response_mode::*;
 use config::Config;
 use sessions::UserSession;
 use oauth2::models::authorize_request::*;
+use oauth2::routes::consent::consent_path;
+use service::routes::login::login_path;
 
 pub fn auth_redirect_url(req: &mut Request, path: &str, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    redirect_forwards_url(req, "/connect/authorize", path, authorize_request.to_params())
+    redirect_forwards_url(req, authorize_path(), path, authorize_request.to_params())
 }
 
 pub fn auth_consent_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    let path = "/connect/consent";
+    let path = consent_path();
     
     relative_url(req, path, Some(authorize_request.to_params()))
 }
 
 pub fn auth_complete_url(req: &mut Request, authorize_request: &AuthorizeRequest) -> Result<iron::Url> {
-    let path = "/connect/complete";
+    let path = complete_path();
     
     relative_url(req, path, Some(authorize_request.to_params()))
 }
@@ -60,6 +62,14 @@ pub fn should_prompt(authorize_request: &AuthorizeRequest) -> bool {
     true
 }
 
+pub fn authorize_path() -> &'static str {
+    "/connect/authorize"
+}
+
+pub fn complete_path() -> &'static str {
+    "/connect/complete"
+}
+
 /// called by user agent on behalf of RP
 /// login with cookie if possible
 /// if not logged in or reprompting for credentials redirect to login url
@@ -75,7 +85,7 @@ pub fn authorize_handler(req: &mut Request) -> IronResult<Response> {
     let authenticated = session.map(|s| s.authenticated).unwrap_or(false);
     
     if !authenticated {
-        let url = try!(auth_redirect_url(req, "/login", &authorize_request.request));
+        let url = try!(auth_redirect_url(req, login_path(), &authorize_request.request));
     
         Ok(Response::with((status::Found, Redirect(url))))
     } else if should_prompt(&authorize_request.request) {
@@ -103,7 +113,7 @@ pub fn complete_handler(req: &mut Request) -> IronResult<Response> {
     let authenticated = session.as_ref().map(|s| s.authenticated).unwrap_or(false);
     
     if !authenticated {
-        let url = try!(redirect_forwards_url(req, "/complete", "/login", authorize_request.request.to_params()));
+        let url = try!(redirect_forwards_url(req, complete_path(), login_path(), authorize_request.request.to_params()));
     
         Ok(Response::with((status::Found, Redirect(url))))
     } else {
