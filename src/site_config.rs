@@ -2,6 +2,7 @@ use std;
 use std::borrow::Cow;
 use std::sync::Arc;
 use std::ops::Deref;
+use std::fs::File;
 
 use serde;
 use chrono::*;
@@ -9,6 +10,8 @@ use iron::prelude::*;
 use iron::typemap;
 use iron::Url;
 use persistent;
+use jsonwebtoken::jwk::*;
+use jsonwebtoken::json::*;
 
 use result;
 use result::{OpenIdConnectError};
@@ -129,6 +132,7 @@ pub struct SiteConfig {
     pub enable_oauth2: bool, // access tokens and refresh tokens without openid. if false, scope must include "openid".
     pub enabled_grants: Vec<GrantType>, // permitted grant types (authorization_code, client_credentials, ...)
     pub enable_dynamic_client_registration: bool, // client dynamic registration endpoint
+    pub jwks: Option<String>, // Key Set location containing RSA private keys for signing and encryption. see jsonwebtoken/bin/jwktool
 }
 
 impl Default for SiteConfig {
@@ -145,6 +149,7 @@ impl Default for SiteConfig {
             enable_oauth2: true,
             enabled_grants: vec![GrantType::AuthorizationCode, GrantType::ClientCredentials],
             enable_dynamic_client_registration: true, // probably a bad default
+            jwks: None,
         }
     }
 }
@@ -192,6 +197,24 @@ impl SiteConfig {
     
     pub fn grant_enabled(&self, grant_type: GrantType) -> bool {
         self.enabled_grants.contains(&grant_type)
+    }
+    
+    pub fn load_jwks(&self) -> result::Result<JwkSet> {
+        let jwks_url = try!(self.jwks.as_ref().ok_or(OpenIdConnectError::ConfigError("no RSA private keys configured".to_owned())));
+        
+        //TODO check for other sources of keys like env vars and KMS
+        
+        let mut f = try!(File::open(jwks_url));
+        
+        let jwks: JwkSet = try!(f.read_json().map_err(OpenIdConnectError::from));
+        
+        for (i, key) in jwks.keys.iter().enumerate() {
+            if ! key.has_value("kid") {
+                return Err(OpenIdConnectError::ConfigError(format!("jwk {} has no kid", i)));
+            }
+        }
+        
+        Ok(jwks)
     }
 }
 

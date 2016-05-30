@@ -1,6 +1,7 @@
 use std::result;
 use std::io;
 use std::num;
+use std::string;
 
 use rustc_serialize::base64::FromBase64Error;
 use iron::prelude::*;
@@ -14,6 +15,7 @@ use url;
 use persistent;
 use jsonwebtoken::result::*;
 use grant_type::*;
+use openssl;
 
 quick_error! {
     #[derive(Debug)]
@@ -213,6 +215,21 @@ quick_error! {
             display("Error deserialising base64")
             cause(e)
         }
+        
+        SslError(e: openssl::ssl::error::SslError) {
+            from()
+            description("ssl error")
+            display("SSL Error: {}", e)
+            cause(e)
+        }
+        
+        Utf8Error(e: string::FromUtf8Error) {
+            from()
+            description("utf8 error")
+            display("Utf8 error: {}", e)
+            cause(e)
+        } 
+        
     }
 }
 

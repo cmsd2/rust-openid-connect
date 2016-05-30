@@ -25,6 +25,7 @@ extern crate rbvt;
 extern crate jsonwebtoken;
 extern crate chrono;
 extern crate cast;
+extern crate openssl;
 
 pub mod result;
 pub mod urls;
