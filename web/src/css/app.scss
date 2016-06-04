@@ -2,6 +2,15 @@ body {
   background: #333;
 }
 
+.grow {
+  width: 100% !important;
+}
+
+.nopadding {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 .row.features, .features .feature {
   background: #eee;
 }
@@ -31,5 +40,54 @@ body {
 
 .row {
   background: white;
-  padding-bottom: 20px;
+}
+
+.spacer {
+  padding:0;
+  height:20px;
+}
+
+.applications-list {
+  padding: 20px 0px;
+}
+
+.client_application {
+  padding: 20px;
+  margin: 20px 0px;
+  background: #ffffe6;
+  border: 1px solid #ccc;
+}
+
+.client_application div.row {
+  background: #ffffe6;
+}
+
+.client_application div.row {
+  padding: 4px 0;
+}
+
+.client_application label {
+  color: #333;
+  padding: 4px 0px;
+}
+
+.client_application .field {
+  background: white;
+  border: 1px solid #bbb;
+  padding: 4px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.client_application .name {
+  font-size: 150%;
+  color: #777;
+}
+
+.client_application ul.redirect_uris {
+  list-style: none;
+}
+
+.client_application td .btn {
+  margin-left: 10px;
 }

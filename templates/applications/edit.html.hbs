@@ -2,7 +2,7 @@
 <div class="row">
   <div class="col-md-2"></div>
   <div class="col-md-8">
-        <form role="form" action="/applications/{{client_id}}" method="post">
+        <form role="form" action="/applications/{{client_id}}" method="post" class="client_application">
             <div class="form-group">
                 <label for="name">Name:</label>
                 <input type="text" class="form-control" id="name" name="name" value="{{name}}">
@@ -10,9 +10,23 @@
             
             {{#each redirect_uris}}
                 <div class="form-group">
-                    <label for="redirect_uri">Redirect URI:</label>
-                    <input type="text" class="form-control" id="redirect_uri_{{@index}}" name="redirect_uris" value="{{this}}">
-                    <button type="submit" class="btn" name="delete_redirect_uri_{{@index}}">
+                    <div class="container-fluid nopadding">
+                        <div class="row nopadding">
+                            <div class="col-md-2 nopadding">
+                                <label for="redirect_uri">Redirect URI:</label>
+                            </div>
+                            <div class="col-md-10 nopadding">
+                                <table class="grow">
+                                    <tr><td class="grow">
+                                        <input type="text" class="form-control" id="redirect_uri_{{@index}}" name="redirect_uris" value="{{this}}">
+                                    </td>
+                                    <td>
+                                        <button type="submit" class="btn" name="delete_redirect_uri_{{@index}}">Delete</button>
+                                    </td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             {{/each}}
             
@@ -23,10 +37,14 @@
         
             <input type="hidden" class="csrf_token" value="{{csrf_token}}" name="csrf_token">
         
-            <button type="submit" class="btn btn-default">Save</button>
+            <div class="spacer"></div>
+            
+            <button type="submit" class="btn btn-default pull-left">Save</button>
             
             <!-- TODO make cancel button go back to referer -->
             <button type="cancel" class="btn pull-right">Cancel</button>
+            
+            <div class="clearfix"></div>
         </form>
   </div>
   <div class="col-md-2"></div>
