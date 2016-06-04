@@ -1,5 +1,5 @@
 body {
-  background: #325;
+  background: #333;
 }
 
 .row.features, .features .feature {
@@ -7,13 +7,13 @@ body {
 }
 
 .row.hero, .row.hero .jumbotron {
-  background: #325;
+  background: #333;
   border: none;
   color: white;
 }
 
 .row.header, .row.footer {
-  background: #325;
+  background: #333;
 }
 
 .row.footer {
@@ -31,4 +31,5 @@ body {
 
 .row {
   background: white;
+  padding-bottom: 20px;
 }

@@ -1,4 +1,7 @@
 <section id="applications">
+<div class="row">
+  <div class="col-md-2"></div>
+  <div class="col-md-8">
     <ul class="applications-list">
         {{#each applications}}
             {{> applications/show.html }}
@@ -7,4 +10,7 @@
         {{/each}}
     </ul>
     <a href="/applications/new">New</a>
+  </div>
+  <div class="col-md-2"></div>
+</div>
 </section>

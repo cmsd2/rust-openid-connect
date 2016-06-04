@@ -4,7 +4,7 @@ use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
-use handlebars_iron::Template;
+use serde_json::value;
 
 use rbvt::result::ValidationError;
 use rbvt::state::*;
@@ -15,6 +15,7 @@ use urls::*;
 use config::Config;
 use users::*;
 use authentication::*;
+use view::View;
 
 #[derive(Clone, Debug)]
 pub struct RegisterRequest {
@@ -26,8 +27,6 @@ pub struct RegisterRequest {
 pub struct RegisterRequestBuilder {
     username: Option<String>,
     password: Option<String>,
-    
-    validation_state: ValidationState,
 }
 
 impl RegisterRequestBuilder {
@@ -35,36 +34,44 @@ impl RegisterRequestBuilder {
         RegisterRequestBuilder {
             username: None,
             password: None,
-            
-            validation_state: ValidationState::new(),
         }
     }
     
     pub fn build(self) -> Result<RegisterRequest> {
-        if self.validation_state.valid {
-            Ok(RegisterRequest {
-                username: self.username.unwrap(),
-                password: self.password.unwrap(),
-            })
-        } else {
-            Err(OpenIdConnectError::from(ValidationError::ValidationError(self.validation_state)))
-        }
+        Ok(RegisterRequest {
+            username: self.username.unwrap(),
+            password: self.password.unwrap(),
+        })
     }
     
-    pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<bool> {
+    pub fn validate(&self, state: &mut ValidationState) -> Result<bool> {
+        if self.username.is_none() {
+            state.reject("username", ValidationError::MissingRequiredValue("username".to_owned()));
+        }
+        
+        if self.password.is_none() {
+            state.reject("password", ValidationError::MissingRequiredValue("password".to_owned()));
+        }
+        
+        Ok(state.valid)
+    }
+    
+    pub fn load_params(&mut self, params: &HashMap<String, Vec<String>>) -> Result<()> {
         if let Some(username) = try!(multimap_get_maybe_one(params, "username")) {
             self.username = Some(username.to_owned());
-        } else {
-            self.validation_state.reject("username", ValidationError::MissingRequiredValue("username".to_owned()));
         }
         
         if let Some(password) = try!(multimap_get_maybe_one(params, "password")) {
             self.password = Some(password.to_owned());
-        } else {
-            self.validation_state.reject("password", ValidationError::MissingRequiredValue("password".to_owned()));
         }
         
-        Ok(self.validation_state.valid)
+        let mut validation_state = ValidationState::new();
+        
+        if ! try!(self.validate(&mut validation_state)) {
+            Err(OpenIdConnectError::from(ValidationError::ValidationError(validation_state)))
+        } else {
+            Ok(())
+        }
     }
     
     pub fn build_from_params(params: &HashMap<String, Vec<String>>) -> Result<RegisterRequest> {
@@ -74,19 +81,16 @@ impl RegisterRequestBuilder {
         
         builder.build()
     }
-}
-
-pub fn new_register_form() -> HashMap<String, String> {
-    let mut data = HashMap::new();
     
-    data.insert("username".to_owned(), String::new());
-    data.insert("password".to_owned(), String::new());
-    
-    data
+    pub fn populate_view(&self, view: &mut View) {
+        view.data.insert("username".to_owned(), value::to_value(&self.username));
+        view.data.insert("password".to_owned(), value::to_value(&self.password));
+    }
 }
 
 pub fn register_get_handler(req: &mut Request) -> IronResult<Response> {
-    let mut data = new_register_form();
+    let mut view = try!(View::new_for_session("register.html", req));
+    let mut register_form = RegisterRequestBuilder::new();
     
     match req.get_ref::<UrlEncodedQuery>() {
         Ok(params) => {
@@ -95,8 +99,8 @@ pub fn register_get_handler(req: &mut Request) -> IronResult<Response> {
             match RegisterRequestBuilder::build_from_params(params) {
                 Ok(register_request) => {
                     //TODO escape values to protect against cross-site-scripting
-                    data.insert("username".to_owned(), register_request.username);
-                    data.insert("password".to_owned(), register_request.password);
+                    register_form.username = Some(register_request.username);
+                    register_form.password = Some(register_request.password);
                 },
                 Err(err) => {
                     debug!("invalid registration details: {:?}", err);
@@ -108,9 +112,9 @@ pub fn register_get_handler(req: &mut Request) -> IronResult<Response> {
         }
     };
     
-    data.insert("_view".to_owned(), "register.html".to_owned());
+    register_form.populate_view(&mut view);
     
-    Ok(Response::with((status::Ok, Template::new("_layout.html", data))))
+    Ok(Response::with((status::Ok, view.template())))
 }
 
 pub fn register_post_handler(req: &mut Request) -> IronResult<Response> {
@@ -119,7 +123,7 @@ pub fn register_post_handler(req: &mut Request) -> IronResult<Response> {
     let register_url = try!(relative_url(req, "/register", None));
     let home_url =try!(relative_url(req, "/", None));
     
-    match req.get_ref::<UrlEncodedBody>() {
+    match req.get::<UrlEncodedBody>() {
         Ok(params) => {
             debug!("registering new user with creds {:?}", params);
             // TODO validate csrf
@@ -127,20 +131,27 @@ pub fn register_post_handler(req: &mut Request) -> IronResult<Response> {
             // TODO multistep registration flow
             // TODO redirect to flow caller
             
-            match RegisterRequestBuilder::build_from_params(params) {
+            match RegisterRequestBuilder::build_from_params(&params) {
                 Ok(register_request) => {
                     let user = User::new(new_user_id(), register_request.username, Some(register_request.password));
                     
                     debug!("add user to repo: {:?}", user);
                 
+                    // TODO render error as flash message
                     try!(config.user_repo.add_user(user));
+                    
+                    // TODO send email to user with confirmation token
+                    
+                    let login = try!(config.session_controller.login_with_credentials(req));
+                    
+                    Ok(Response::with((status::Found, Redirect(home_url))).set(login.cookie()))
                 },
                 Err(err) => {
                     debug!("user validation errors: {:?}", err);
+                    
+                    Ok(Response::with((status::Found, Redirect(register_url))))
                 }
             }
-            
-            Ok(Response::with((status::Found, Redirect(home_url))))
         },
         Err(err) => {
             debug!("error parsing body: {:?}", err);
