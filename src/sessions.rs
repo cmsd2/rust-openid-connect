@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::borrow::Cow;
 use rand;
 use rand::Rng;
+use crypto::digest::Digest;
+use crypto::md5::Md5;
 
 use rustc_serialize::base64;
 use rustc_serialize::base64::ToBase64;
@@ -36,17 +38,30 @@ impl Credentials {
     }
 }
 
+pub struct Gravatar;
+
+impl Gravatar {
+    pub fn hash(email: &str) -> String {
+        let s = email.to_owned().trim().to_lowercase();
+        let mut md5 = Md5::new();
+        md5.input_str(&s);
+        md5.result_str().to_owned()
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserSession {
     pub username: Option<String>,
     pub user_id: Option<String>,
     pub session_id: Option<String>,
     pub authenticated: bool,
+    pub gravatar: Option<String>,
 }
 
 impl UserSession {
     pub fn new(user_id: String, username: String, session_id: String) -> UserSession {
         UserSession {
+            gravatar: Some(Gravatar::hash(&username)),
             username: Some(username),
             user_id: Some(user_id),
             session_id: Some(session_id),
@@ -61,7 +76,8 @@ impl Default for UserSession {
             username: None,
             user_id: None,
             session_id: None,
-            authenticated: false
+            authenticated: false,
+            gravatar: None,
         }
     }
 }
