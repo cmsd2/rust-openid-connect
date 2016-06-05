@@ -3,6 +3,7 @@ use iron::status;
 use iron::modifiers::Redirect;
 use urlencoded::UrlEncodedBody;
 use serde_json::value;
+use rbvt::params::*;
 
 use config::Config;
 use result::*;
@@ -71,16 +72,20 @@ pub fn applications_update_handler(req: &mut Request) -> IronResult<Response> {
     let show_redirect_url = try!(relative_url(req, "/applications", None));
     
     let params = try!(req.get_ref::<UrlEncodedBody>().map_err(OpenIdConnectError::from));
-    let mut builder = ClientApplicationBuilder::new();
-    try!(builder.load_params(params));
+
+    if try!(multimap_get_maybe_one(params, "cancel").map_err(OpenIdConnectError::from)).is_none() {
+
+        let mut builder = ClientApplicationBuilder::new();
+        try!(builder.load_params(params));
     
-    let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
-    let mut client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
+        let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
+        let mut client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
     
-    client_app.name = builder.name;
-    client_app.redirect_uris = builder.redirect_uris.unwrap_or(vec![]);
+        client_app.name = builder.name;
+        client_app.redirect_uris = builder.redirect_uris.unwrap_or(vec![]);
     
-    try!(config.application_repo.update_client_application(&client_app));
+        try!(config.application_repo.update_client_application(&client_app));
+    }
     
     Ok(Response::with((status::Found, Redirect(show_redirect_url))))
 }
@@ -89,15 +94,22 @@ pub fn applications_create_handler(req: &mut Request) -> IronResult<Response> {
     let config = try!(Config::get(req));
     
     let params = try!(req.get_ref::<UrlEncodedBody>().map_err(OpenIdConnectError::from)).clone();
-    let mut builder = ClientApplicationBuilder::new();
     
-    try!(builder.load_params(&params));
+    if try!(multimap_get_maybe_one(&params, "cancel").map_err(OpenIdConnectError::from)).is_none() {
+        let mut builder = ClientApplicationBuilder::new();
     
-    let ca = try!(config.application_repo.create_client_application(builder));
+        try!(builder.load_params(&params));
+    
+        let ca = try!(config.application_repo.create_client_application(builder));
 
-    let show_redirect_url = try!(relative_url(req, &format!("/applications/{}", ca.client_id), None));
+        let show_redirect_url = try!(relative_url(req, &format!("/applications/{}", ca.client_id), None));
     
-    Ok(Response::with((status::Found, Redirect(show_redirect_url))))
+        Ok(Response::with((status::Found, Redirect(show_redirect_url))))
+    } else {
+        let cancel_redirect_url = try!(relative_url(req, &format!("/applications"), None));
+        
+        Ok(Response::with((status::Found, Redirect(cancel_redirect_url))))
+    }
 }
 /*
 pub fn read_client_application_body(req: &mut Request) -> Result<ClientApplication> {
