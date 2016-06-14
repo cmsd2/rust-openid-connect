@@ -58,14 +58,24 @@ impl ClientApplicationRepo for InMemoryClientApplicationRepo {
         let mut client_applications = self.client_applications.lock().unwrap();
         
         input.client_id = input.client_id.or_else(|| Some(new_client_id()));
-        input.secret = Some(new_secret());
-        input.hashed_secret = Some(hash_password(input.secret.as_ref().map(|s| &s[..]).unwrap_or("")));
+        
+        let mut secret = input.secret.clone();
         
         if ! try!(input.validate()) {  
             return Err(OpenIdConnectError::ValidationError(ValidationError::ValidationError(input.validation_state)));
         }
         
-        let ca = try!(input.build());
+        let mut ca = try!(input.build());
+
+        if try!(ca.uses_secret()) {
+            if secret.is_none() {
+                secret = Some(new_secret());
+            }
+        }
+
+        ca.hashed_secret = secret.map(|secret| {
+            hash_password(&secret)
+        });
         
         if Self::find_index(&client_applications, &ca.client_id).is_some() {
             Err(OpenIdConnectError::ClientApplicationAlreadyExists)

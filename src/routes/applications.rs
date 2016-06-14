@@ -41,7 +41,7 @@ pub fn applications_show_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("applications/show.html", req));
     
-    view.data.insert("name".to_owned(), value::to_value(&client_app.name));
+    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
     view.data.insert("redirect_uris".to_owned(), value::to_value(&client_app.redirect_uris));
     view.data.insert("client_id".to_owned(), value::to_value(&client_id));
     
@@ -58,7 +58,7 @@ pub fn applications_edit_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("applications/edit.html", req));
     
-    view.data.insert("name".to_owned(), value::to_value(&client_app.name));
+    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
     view.data.insert("redirect_uris".to_owned(), value::to_value(&client_app.redirect_uris));
     view.data.insert("client_id".to_owned(), value::to_value(&client_id));
     
@@ -81,7 +81,7 @@ pub fn applications_update_handler(req: &mut Request) -> IronResult<Response> {
         let maybe_client_app = try!(config.application_repo.find_client_application(client_id));
         let mut client_app = try!(maybe_client_app.ok_or(OpenIdConnectError::ClientApplicationNotFound));
     
-        client_app.name = builder.name;
+        client_app.client_name = builder.client_name;
         client_app.redirect_uris = builder.redirect_uris.unwrap_or(vec![]);
     
         try!(config.application_repo.update_client_application(&client_app));

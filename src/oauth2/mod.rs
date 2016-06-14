@@ -61,5 +61,6 @@ pub fn oauth2_router(config: &Config) -> Router {
     oidc_router.post("/token", api_handler(&config, routes::token_post_handler));
     oidc_router.get("/userinfo", api_handler(&config, routes::userinfo_get_handler));
     oidc_router.get("/identity", api_handler(&config, routes::identity_get_handler));
+    oidc_router.post("/register", api_handler(&config, routes::register_application_post_handler));
     oidc_router
 }

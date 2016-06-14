@@ -25,20 +25,20 @@ impl ClientApplicationList {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ClientApplicationUpdate {
-    name: Option<String>,
+    client_name: Option<String>,
     redirect_uris: Option<Vec<String>>,
 }
 
 impl ClientApplicationUpdate {
     pub fn apply(self, client_app: &mut ClientApplication) {
-        client_app.name = self.name;
+        client_app.client_name = self.client_name;
         client_app.redirect_uris = self.redirect_uris.unwrap_or(vec![]);
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ClientApplicationView {
-    pub name: Option<String>,
+    pub client_name: Option<String>,
     pub client_id: String,
     pub redirect_uris: Vec<String>,
 }
@@ -46,7 +46,7 @@ pub struct ClientApplicationView {
 impl ClientApplicationView {
     pub fn new(client_app: ClientApplication) -> ClientApplicationView {
         ClientApplicationView {
-            name: client_app.name,
+            client_name: client_app.client_name,
             client_id: client_app.client_id,
             redirect_uris: client_app.redirect_uris,
         }

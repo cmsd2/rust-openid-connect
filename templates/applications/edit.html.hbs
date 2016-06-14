@@ -4,8 +4,8 @@
   <div class="col-md-8">
         <form role="form" action="/applications/{{client_id}}" method="post" class="client_application">
             <div class="form-group">
-                <label for="name">Name:</label>
-                <input type="text" class="form-control" id="name" name="name" value="{{name}}">
+                <label for="client_name">Name:</label>
+                <input type="text" class="form-control" id="client_name" name="client_name" value="{{client_name}}">
             </div>
             
             {{#each redirect_uris}}

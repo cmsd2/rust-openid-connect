@@ -75,13 +75,13 @@ pub fn main() {
     let application_repo = Arc::new(Box::new(repos::InMemoryClientApplicationRepo::new()) as Box<repos::ClientApplicationRepo>);
   
     let mut test_app = ClientApplicationBuilder::new();
-    test_app.name = Some("Wpv WebView Client".to_owned());
+    test_app.client_name = Some("Wpv WebView Client".to_owned());
     test_app.client_id = Some("wpf.webview.client".to_owned());
     test_app.redirect_uris = Some(vec!["oob://localhost/wpf.webview.client".to_owned()]);
     application_repo.create_client_application(test_app).unwrap();
   
     let mut test_app = ClientApplicationBuilder::new();
-    test_app.name = Some("pyoidc".to_owned());
+    test_app.client_name = Some("pyoidc".to_owned());
     test_app.client_id = Some("pyoidc".to_owned());
     test_app.secret = Some("secret".to_owned());
     test_app.redirect_uris = Some(vec!["oob://localhost/callback".to_owned()]);
@@ -102,12 +102,9 @@ pub fn main() {
     
     let mut site_config = SiteConfig::new();
     //TODO load site config from file
-    site_config.token_issuer = Some("http://localhost:3000".to_owned()); // should be https
+    site_config.token_issuer = Some("https://localhost:3000".to_owned());
     
     let woidc = openid_config::WellKnownOpenIdConfiguration::new_for_site(&site_config);
-    
-
-    
     
     let mut router = Router::new();
     router.get("/", web_handler(&config, home_handler));

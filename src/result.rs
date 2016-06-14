@@ -16,6 +16,7 @@ use persistent;
 use jsonwebtoken::result::*;
 use grant_type::*;
 use openssl;
+use cast;
 
 quick_error! {
     #[derive(Debug)]
@@ -230,6 +231,16 @@ quick_error! {
             cause(e)
         } 
         
+        CastError(e: cast::Error) {
+            from()
+            description("cast error")
+            display("Cast error: {:?}", e)
+        }
+
+        UnknownTokenEndpointAuthMethod(s: String) {
+            description("unknown token_endpoint_auth_method")
+            display("unknown token_endpoint_auth_method: {}", s)
+        }
     }
 }
 

@@ -62,7 +62,7 @@ pub fn grants_show_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("grants/show.html", req));
     
-    view.data.insert("name".to_owned(), value::to_value(&client_app.name));
+    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
     view.data.insert("permissions_allowed".to_owned(), value::to_value(&grant.permissions_allowed));
     view.data.insert("permissions_denied".to_owned(), value::to_value(&grant.permissions_denied));
     view.data.insert("client_id".to_owned(), value::to_value(&client_id));
@@ -91,7 +91,7 @@ pub fn grants_edit_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("grants/edit.html", req));
     
-    view.data.insert("name".to_owned(), value::to_value(&client_app.name));
+    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
     view.data.insert("permissions_allowed".to_owned(), value::to_value(&grant.permissions_allowed));
     view.data.insert("permissions_denied".to_owned(), value::to_value(&grant.permissions_denied));
     view.data.insert("client_id".to_owned(), value::to_value(&client_id));
