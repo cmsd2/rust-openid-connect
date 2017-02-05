@@ -1,5 +1,7 @@
 # OpenId Connect Server and Libraries
 
+This is currently just an experiment.
+
 This is a project to create libraries for OpenId Connect, implementing 
 both the identity provider and relying party functionality.
 
