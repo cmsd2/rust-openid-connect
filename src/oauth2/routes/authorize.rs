@@ -39,13 +39,13 @@ pub fn auth_return_to_client_url(req: &mut Request, user_id: &str, authorize_req
     
     let token = try!(config.token_repo.create_code_token(req, user_id, authorize_request));
     
-    let query_pairs = token.query_pairs();
+    let query_pairs = try!(token.query_pairs());
     
     if ResponseMode::Query == authorize_request.response_mode.unwrap_or(
             ResponseMode::default_for_response_type(authorize_request.response_type)) {
-        uri.set_query_from_pairs(query_pairs);
+        uri.set_query(Some(&serialize_query_pairs_vec(query_pairs)));
     } else {
-        uri.fragment = Some(url::form_urlencoded::serialize(query_pairs));
+        uri.set_fragment(Some(&serialize_query_pairs_vec(query_pairs)));
     }
       
     Ok(uri.to_string())

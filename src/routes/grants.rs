@@ -35,10 +35,10 @@ pub fn grants_index_handler(req: &mut Request) -> IronResult<Response> {
    
     let grants_list = try!(config.grant_repo.get_user_grants(&user_id));
     debug!("found grants: {:?}", grants_list);
-    view.data.insert("grants".to_owned(), value::to_value(&grants_list));
+    view.data.insert("grants".to_owned(), try!(value::to_value(&grants_list).map_err(OpenIdConnectError::from)));
     debug!("rendering view {:?}", view);
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn grants_show_handler(req: &mut Request) -> IronResult<Response> {
@@ -62,12 +62,12 @@ pub fn grants_show_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("grants/show.html", req));
     
-    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
-    view.data.insert("permissions_allowed".to_owned(), value::to_value(&grant.permissions_allowed));
-    view.data.insert("permissions_denied".to_owned(), value::to_value(&grant.permissions_denied));
-    view.data.insert("client_id".to_owned(), value::to_value(&client_id));
+    view.data.insert("client_name".to_owned(), try!(value::to_value(&client_app.client_name).map_err(OpenIdConnectError::from)));
+    view.data.insert("permissions_allowed".to_owned(), try!(value::to_value(&grant.permissions_allowed).map_err(OpenIdConnectError::from)));
+    view.data.insert("permissions_denied".to_owned(), try!(value::to_value(&grant.permissions_denied).map_err(OpenIdConnectError::from)));
+    view.data.insert("client_id".to_owned(), try!(value::to_value(&client_id).map_err(OpenIdConnectError::from)));
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn grants_edit_handler(req: &mut Request) -> IronResult<Response> {
@@ -91,12 +91,12 @@ pub fn grants_edit_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("grants/edit.html", req));
     
-    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
-    view.data.insert("permissions_allowed".to_owned(), value::to_value(&grant.permissions_allowed));
-    view.data.insert("permissions_denied".to_owned(), value::to_value(&grant.permissions_denied));
-    view.data.insert("client_id".to_owned(), value::to_value(&client_id));
+    view.data.insert("client_name".to_owned(), try!(value::to_value(&client_app.client_name).map_err(OpenIdConnectError::from)));
+    view.data.insert("permissions_allowed".to_owned(), try!(value::to_value(&grant.permissions_allowed).map_err(OpenIdConnectError::from)));
+    view.data.insert("permissions_denied".to_owned(), try!(value::to_value(&grant.permissions_denied).map_err(OpenIdConnectError::from)));
+    view.data.insert("client_id".to_owned(), try!(value::to_value(&client_id).map_err(OpenIdConnectError::from)));
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn grants_update_handler(req: &mut Request) -> IronResult<Response> {

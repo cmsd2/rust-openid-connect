@@ -67,7 +67,7 @@ impl fmt::Display for ResponseType {
 }
 
 impl serde::ser::Serialize for ResponseType {
-        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+        fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
         serializer.serialize_str(&format!("{}", self))
@@ -75,7 +75,7 @@ impl serde::ser::Serialize for ResponseType {
 }
 
 impl serde::de::Deserialize for ResponseType {
-        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<ResponseType, D::Error>
+        fn deserialize<D>(deserializer: D) -> std::result::Result<ResponseType, D::Error>
         where D: serde::de::Deserializer
     {
         deserializer.deserialize(ResponseTypeVisitor)
@@ -86,8 +86,12 @@ pub struct ResponseTypeVisitor;
 
 impl serde::de::Visitor for ResponseTypeVisitor {
     type Value = ResponseType;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("response_type")
+    }
     
-    fn visit_str<E>(&mut self, s: &str) -> std::result::Result<ResponseType, E> where E: serde::Error
+    fn visit_str<E>(self, s: &str) -> std::result::Result<ResponseType, E> where E: serde::de::Error
     {
         ResponseType::from_str(s).map_err(|e| serde::de::Error::custom(e.to_string()))
     }

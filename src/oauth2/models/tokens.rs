@@ -5,6 +5,7 @@ use serde::de::Deserialize;
 use serde_json;
 use chrono::*;
 use site_config::*;
+use result::OpenIdConnectError;
 
 #[derive(Copy, Clone, Debug)]
 pub enum TokenType {
@@ -20,7 +21,7 @@ impl Display for TokenType {
 }
 
 impl serde::Serialize for TokenType {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
         let s = format!("{}", self);
@@ -30,7 +31,7 @@ impl serde::Serialize for TokenType {
 }
 
 impl Deserialize for TokenType {
-    fn deserialize<D>(deserializer: &mut D) -> Result<TokenType, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<TokenType, D::Error>
         where D: serde::Deserializer,
     {
         deserializer.deserialize(TokenTypeVisitor)
@@ -42,7 +43,11 @@ struct TokenTypeVisitor;
 impl serde::de::Visitor for TokenTypeVisitor {
     type Value = TokenType;
 
-    fn visit_string<E>(&mut self, value: String) -> Result<TokenType, E>
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("token type")
+    }
+
+    fn visit_string<E>(self, value: String) -> Result<TokenType, E>
         where E: serde::de::Error,
     {
         match &value[..] {
@@ -76,69 +81,63 @@ impl Token {
         }
     }
     
-    pub fn query_pairs(&self) -> Vec<(String, String)> {
+    pub fn query_pairs(&self) -> Result<Vec<(String, String)>, OpenIdConnectError> {
         let mut qp = vec![];
-        let json = serde_json::to_value(self);
+        let json = try!(serde_json::to_value(self));
         for (k,v) in json.as_object().unwrap() {
             if !v.is_null() {
                 if v.is_number() {
                     qp.push((k.to_owned(), format!("{}", v.as_i64().unwrap())));
                 } else if v.is_boolean() {
-                    if v.as_boolean().unwrap() {
+                    if v.as_bool().unwrap() {
                         qp.push((k.to_owned(), "true".to_owned()));
                     } else {
                         qp.push((k.to_owned(), "false".to_owned()));
                     }
                 } else if v.is_string() {
-                    qp.push((k.to_owned(), v.as_string().map(|s| s.to_owned()).unwrap()));
+                    qp.push((k.to_owned(), v.as_str().map(|s| s.to_owned()).unwrap()));
                 } else {
                     debug!("can't serialize thing {}={:?}", k, v);
                     unimplemented!();
                 }
             }
         }
-        qp
+        Ok(qp)
     }
 }
 
 impl serde::ser::Serialize for Token {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
-        serializer.serialize_map(TokenSerVisitor(&self))
-    }
-}
+        use serde::ser::SerializeMap;
 
-struct TokenSerVisitor<'a>(&'a Token);
+        let mut map = try!(serializer.serialize_map(None));
 
-impl<'a> serde::ser::MapVisitor for TokenSerVisitor<'a> {
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-        where S: serde::Serializer
-    {        
-        if let Some(ref code) = self.0.code {
-            try!(serializer.serialize_map_elt("code", code));
+        if let Some(ref code) = self.code {
+            try!(map.serialize_entry("code", code));
         }
         
-        if let Some(ref access_token) = self.0.access_token {
-            try!(serializer.serialize_map_elt("access_token", access_token));
+        if let Some(ref access_token) = self.access_token {
+            try!(map.serialize_entry("access_token", access_token));
         }
         
-        try!(serializer.serialize_map_elt("token_type", self.0.token_type));
+        try!(map.serialize_entry("token_type", &self.token_type));
         
-        if let Some(ref refresh_token) = self.0.refresh_token {
-            try!(serializer.serialize_map_elt("refresh_token", refresh_token));
+        if let Some(ref refresh_token) = self.refresh_token {
+            try!(map.serialize_entry("refresh_token", refresh_token));
         }
         
-        if let Some(ref id_token) = self.0.id_token {
-            try!(serializer.serialize_map_elt("id_token", id_token));
+        if let Some(ref id_token) = self.id_token {
+            try!(map.serialize_entry("id_token", id_token));
         }
         
-        if let Some(ref state) = self.0.state {
-            try!(serializer.serialize_map_elt("state", state));
+        if let Some(ref state) = self.state {
+            try!(map.serialize_entry("state", state));
         }
         
-        try!(serializer.serialize_map_elt("expires_in", self.0.expires_in));
+        try!(map.serialize_entry("expires_in", &self.expires_in));
         
-        Ok(None)
+        map.end()
     }
 }

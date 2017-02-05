@@ -33,7 +33,7 @@ pub struct LoginConfig {
     /// This cookie contains the default values that will be used for session cookies.
     ///
     /// You may e.g. override `httponly` or `secure` however you wish.
-    pub cookie_base: Cookie,
+    pub cookie_base: Cookie<'static>,
 }
 
 impl LoginConfig {

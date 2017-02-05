@@ -68,17 +68,17 @@ pub fn consent_get_handler(req: &mut Request) -> IronResult<Response> {
         return Ok(Response::with((status::Found, Redirect(url))));
     }
        
-    view.data.insert("permissions".to_owned(), value::to_value(&permissions_for_scopes(&authorize_request.request.scopes)));
-    view.data.insert("client".to_owned(), value::to_value(&authorize_request.client));    
+    view.data.insert("permissions".to_owned(), try!(value::to_value(&permissions_for_scopes(&authorize_request.request.scopes)).map_err(OpenIdConnectError::from)));
+    view.data.insert("client".to_owned(), try!(value::to_value(&authorize_request.client).map_err(OpenIdConnectError::from)));
     
     let return_token = RedirectToken::new_for_path_and_params(authorize_path(), &authorize_request.request.to_params());
     // view.data.insert("return".to_owned(), value::to_value(&return_token));
     let encoded_token = try!(return_token.encode(&config.mac_signer).map_err(OpenIdConnectError::from));
-    view.data.insert("return".to_owned(), value::to_value(&encoded_token));
+    view.data.insert("return".to_owned(), try!(value::to_value(&encoded_token).map_err(OpenIdConnectError::from)));
 
     debug!("parsed query params: {:?}", params);
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 /// called by user agent form post

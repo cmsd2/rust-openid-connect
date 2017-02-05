@@ -28,7 +28,7 @@ impl fmt::Display for GrantType {
 }
 
 impl serde::ser::Serialize for GrantType {
-        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
         serializer.serialize_str(&format!("{}", self))
@@ -36,7 +36,7 @@ impl serde::ser::Serialize for GrantType {
 }
 
 impl serde::de::Deserialize for GrantType {
-        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<GrantType, D::Error>
+        fn deserialize<D>(deserializer: D) -> std::result::Result<GrantType, D::Error>
         where D: serde::de::Deserializer
     {
         deserializer.deserialize(GrantTypeVisitor)
@@ -48,7 +48,11 @@ pub struct GrantTypeVisitor;
 impl serde::de::Visitor for GrantTypeVisitor {
     type Value = GrantType;
     
-    fn visit_str<E>(&mut self, s: &str) -> std::result::Result<GrantType, E> where E: serde::Error
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("grant_type")
+    }
+
+    fn visit_str<E>(self, s: &str) -> std::result::Result<GrantType, E> where E: serde::de::Error
     {
         GrantType::from_str(s).map_err(|e| serde::de::Error::custom(e.to_string()))
     }

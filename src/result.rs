@@ -10,10 +10,10 @@ use urlencoded;
 use bodyparser;
 use serde_json;
 use rbvt::params;
-use rbvt;
 use url;
 use persistent;
 use jsonwebtoken::result::*;
+use jsonwebtoken::validation;
 use grant_type::*;
 use openssl;
 use cast;
@@ -109,7 +109,7 @@ quick_error! {
             display("Redirect uri is not recognised")
         }
         
-        ValidationError(err: rbvt::result::ValidationError) {
+        ValidationError(err: validation::ValidationError) {
             from()
             description("validation error")
             display("Validation error: {}", err)
@@ -217,7 +217,7 @@ quick_error! {
             cause(e)
         }
         
-        SslError(e: openssl::ssl::error::SslError) {
+        SslError(e: openssl::ssl::error::Error) {
             from()
             description("ssl error")
             display("SSL Error: {}", e)

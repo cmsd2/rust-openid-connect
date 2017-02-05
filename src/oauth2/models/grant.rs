@@ -1,9 +1,9 @@
 use std;
+use std::fmt;
 
 use serde::{Serializer, Deserializer};
 use serde;
-use rbvt::result::ValidationError;
-use rbvt::state::*;
+use jsonwebtoken::validation::*;
 use chrono::*;
 use result::OpenIdConnectError;
 
@@ -101,28 +101,27 @@ impl Grant {
 struct GrantSerVisitor<'a>(&'a Grant);
 
 impl serde::Serialize for Grant {
-    fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
-        serializer.serialize_struct("grant", GrantSerVisitor(self))
-    }
-}
+        use serde::ser::SerializeStruct;
 
-impl <'a> serde::ser::MapVisitor for GrantSerVisitor<'a> {
-    fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error> where S: Serializer {
-        try!(serializer.serialize_struct_elt("user_id", &self.0.user_id));
-        try!(serializer.serialize_struct_elt("client_id", &self.0.client_id));
-        try!(serializer.serialize_struct_elt("permissions_allowed", &self.0.permissions_allowed));
-        try!(serializer.serialize_struct_elt("permissions_denied", &self.0.permissions_denied));
-        try!(serializer.serialize_struct_elt("created_at", &self.0.created_at.timestamp()));
-        try!(serializer.serialize_struct_elt("modified_at", &self.0.modified_at.timestamp()));
-        try!(serializer.serialize_struct_elt("accessed_at", &self.0.accessed_at.timestamp()));
-        Ok(None)
+        let mut struc = try!(serializer.serialize_struct("grant", 7));
+
+        try!(struc.serialize_field("user_id", &self.user_id));
+        try!(struc.serialize_field("client_id", &self.client_id));
+        try!(struc.serialize_field("permissions_allowed", &self.permissions_allowed));
+        try!(struc.serialize_field("permissions_denied", &self.permissions_denied));
+        try!(struc.serialize_field("created_at", &self.created_at.timestamp()));
+        try!(struc.serialize_field("modified_at", &self.modified_at.timestamp()));
+        try!(struc.serialize_field("accessed_at", &self.accessed_at.timestamp()));
+
+        struc.end()
     }
 }
 
 impl serde::Deserialize for Grant {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: Deserializer {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer {
         deserializer.deserialize(GrantDeVisitor)
     }
 }
@@ -131,8 +130,12 @@ struct GrantDeVisitor;
 
 impl serde::de::Visitor for GrantDeVisitor {
     type Value = Grant;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("grant")
+    }
     
-    fn visit_map<V>(&mut self, mut visitor: V) -> Result<Grant, V::Error>
+    fn visit_map<V>(self, mut visitor: V) -> Result<Grant, V::Error>
         where V: serde::de::MapVisitor,
     {
         let mut user_id: Option<String> = None;
@@ -159,8 +162,6 @@ impl serde::de::Visitor for GrantDeVisitor {
                 break;
             }
         }
-
-        try!(visitor.end());
         
         let mut vs = ValidationState::new();
         

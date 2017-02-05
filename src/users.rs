@@ -1,9 +1,8 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
-use rbvt::result::ValidationError;
 use rbvt::params::*;
-use rbvt::state::*;
+use jsonwebtoken::validation::*;
 
 use result::{Result, OpenIdConnectError};
 use authentication::*;

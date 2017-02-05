@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use rbvt::result::ValidationError;
-
+use jsonwebtoken::validation::*;
 use result::{Result, OpenIdConnectError};
 use authentication::*;
 

@@ -188,7 +188,7 @@ impl SessionController {
         debug!("loading session id");
         let config = try!(req.get::<persistent::Read<LoginConfig>>());
                 
-        let session = match req.get_cookie(&config.cookie_base.name) {
+        let session = match req.get_cookie(&config.cookie_base.name()) {
             Some(c) if !c.value.is_empty() => {
                 Some(c.value.clone())
             },

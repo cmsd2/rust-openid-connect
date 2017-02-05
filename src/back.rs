@@ -6,10 +6,11 @@ use urls::*;
 use jsonwebtoken::jwt::{Jwt, JwtClaims};
 use jsonwebtoken::json::*;
 use jsonwebtoken::claims::claims_verifier;
+use jsonwebtoken::claims::time::*;
+use jsonwebtoken::validation::*;
 use config::Config;
 use chrono::*;
 use rbvt::params::*;
-use rbvt::validation::Validator;
 
 pub type RedirectToken = Jwt;
 
@@ -60,7 +61,7 @@ pub fn load_token(req: &mut Request, params: &HashMap<String, Vec<String>>, toke
         if !return_str.is_empty() {
             let token = try!(Jwt::decode(&return_str, &config.mac_signer));
         
-            let mut v = claims_verifier::<JwtClaims>();
+            let mut v: ValidationSchema<JwtClaims> = claims_verifier(SystemTimeProvider, Duration::zero(), Duration::zero());
             let valid = try!(v.validate(&token.claims));
             if valid {
                 Ok(Some(token))

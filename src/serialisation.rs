@@ -41,7 +41,7 @@ impl Deref for UTCDateTime {
 }
 
 impl serde::ser::Serialize for UTCDateTime {
-        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
         self.date_time.serialize_with(serializer)
@@ -49,7 +49,7 @@ impl serde::ser::Serialize for UTCDateTime {
 }
 
 impl serde::de::Deserialize for UTCDateTime {
-        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<UTCDateTime, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<UTCDateTime, D::Error>
         where D: serde::de::Deserializer
     {
         let date_time: DateTime<UTC> = try!(DeserializeWith::deserialize_with(deserializer));
@@ -59,35 +59,35 @@ impl serde::de::Deserialize for UTCDateTime {
 }
 
 pub trait SerializeWith: Sized {
-    fn serialize_with<S>(&self, ser: &mut S) -> std::result::Result<(), S::Error>
+    fn serialize_with<S>(&self, ser: S) -> std::result::Result<S::Ok, S::Error>
         where S: Serializer;
 }
 
 pub trait DeserializeWith: Sized {
-    fn deserialize_with<D>(de: &mut D) -> std::result::Result<Self, D::Error>
+    fn deserialize_with<D>(de: D) -> std::result::Result<Self, D::Error>
         where D: Deserializer;
 }
 
 impl SerializeWith for DateTime<UTC> {
-    fn serialize_with<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error> where S: Serializer {
+    fn serialize_with<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
         self.timestamp().serialize(serializer)
     }
 }
  
 impl DeserializeWith for DateTime<UTC> {
-    fn deserialize_with<D>(deserializer: &mut D) -> std::result::Result<DateTime<UTC>, D::Error> where D: Deserializer {
+    fn deserialize_with<D>(deserializer: D) -> std::result::Result<DateTime<UTC>, D::Error> where D: Deserializer {
         Ok(UTC.timestamp(try!(i64::deserialize(deserializer)), 0))
     }
 }
 
 impl SerializeWith for Duration {
-    fn serialize_with<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error> where S: Serializer {
+    fn serialize_with<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
         self.num_seconds().serialize(serializer)
     }
 }
  
 impl DeserializeWith for Duration {
-    fn deserialize_with<D>(deserializer: &mut D) -> std::result::Result<Duration, D::Error> where D: Deserializer {
+    fn deserialize_with<D>(deserializer: D) -> std::result::Result<Duration, D::Error> where D: Deserializer {
         let d = try!(i64::deserialize(deserializer));
         
         Ok(Duration::seconds(d))
@@ -95,13 +95,13 @@ impl DeserializeWith for Duration {
 }
 
 impl SerializeWith for Url {
-    fn serialize_with<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error> where S: Serializer {
+    fn serialize_with<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
         self.to_string().serialize(serializer)
     }
 }
  
 impl DeserializeWith for Url {
-    fn deserialize_with<D>(deserializer: &mut D) -> std::result::Result<Url, D::Error> where D: Deserializer {
+    fn deserialize_with<D>(deserializer: D) -> std::result::Result<Url, D::Error> where D: Deserializer {
         let url_str = try!(String::deserialize(deserializer));
         
         let url = try!(Url::parse(&url_str[..]).map_err(|e| OpenIdConnectError::UrlError(e)).map_err(|e| serde::de::Error::custom(e.to_string())));
@@ -111,7 +111,7 @@ impl DeserializeWith for Url {
 }
 
 impl DeserializeWith for Option<Url> {
-    fn deserialize_with<D>(deserializer: &mut D) -> std::result::Result<Option<Url>, D::Error> where D: Deserializer {
+    fn deserialize_with<D>(deserializer: D) -> std::result::Result<Option<Url>, D::Error> where D: Deserializer {
         let maybe_url_str: Option<String> = try!(Option::deserialize(deserializer));
         
         if let Some(url_str) = maybe_url_str {
@@ -125,7 +125,7 @@ impl DeserializeWith for Option<Url> {
 }
 
 impl <T> SerializeWith for Option<T> where T: SerializeWith {
-    fn serialize_with<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error> where S: Serializer {
+    fn serialize_with<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
         if let Some(obj) = self.as_ref() {
             obj.serialize_with(serializer)
         } else {

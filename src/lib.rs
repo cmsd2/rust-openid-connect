@@ -1,7 +1,3 @@
-// for serde
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
-
 // for large numbers of errors definitions with quick-error
 #![recursion_limit="200"]
 
@@ -13,6 +9,8 @@ extern crate handlebars_iron;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate log;
 extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
 extern crate rustc_serialize;
 extern crate rand;

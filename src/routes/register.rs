@@ -6,8 +6,7 @@ use iron::modifiers::Redirect;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use serde_json::value;
 
-use rbvt::result::ValidationError;
-use rbvt::state::*;
+use jsonwebtoken::validation::*;
 use rbvt::params::*;
 
 use result::{Result, OpenIdConnectError};
@@ -82,9 +81,10 @@ impl RegisterRequestBuilder {
         builder.build()
     }
     
-    pub fn populate_view(&self, view: &mut View) {
-        view.data.insert("username".to_owned(), value::to_value(&self.username));
-        view.data.insert("password".to_owned(), value::to_value(&self.password));
+    pub fn populate_view(&self, view: &mut View) -> Result<()> {
+        view.data.insert("username".to_owned(), try!(value::to_value(&self.username)));
+        view.data.insert("password".to_owned(), try!(value::to_value(&self.password)));
+        Ok(())
     }
 }
 
@@ -114,7 +114,7 @@ pub fn register_get_handler(req: &mut Request) -> IronResult<Response> {
     
     register_form.populate_view(&mut view);
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn register_post_handler(req: &mut Request) -> IronResult<Response> {

@@ -31,7 +31,7 @@ impl View {
         Ok(View::new(name, session))
     }
     
-    pub fn template(self) -> Template {
+    pub fn template(self) -> Result<Template> {
         let template_name = if let Some(layout) = self.layout.clone() {
             layout
         } else {
@@ -40,15 +40,15 @@ impl View {
         
         let mut data = self.data;
         
-        data.insert("view".to_owned(), value::to_value(&self.view));
-        data.insert("session".to_owned(), value::to_value(&self.session));
+        data.insert("view".to_owned(), try!(value::to_value(&self.view)));
+        data.insert("session".to_owned(), try!(value::to_value(&self.session)));
         
         if let Some(csrf_token) = self.csrf_token {
-            data.insert("csrf_token".to_owned(), value::to_value(&csrf_token));
+            data.insert("csrf_token".to_owned(), try!(value::to_value(&csrf_token)));
         }
         
         debug!("rendering view {} {:?}", template_name, data);
         
-        Template::new(&template_name, data)
+        Ok(Template::new(&template_name, data))
     }
 }

@@ -7,8 +7,7 @@ use iron::modifiers::Redirect;
 use urlencoded::*;
 use serde_json::value;
 
-use rbvt::state::*;
-use rbvt::result::ValidationError;
+use jsonwebtoken::validation::*;
 use rbvt::params::*;
 use result::{Result, OpenIdConnectError};
 use urls::*;
@@ -117,13 +116,16 @@ pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
     
     match req.get_ref::<UrlEncodedQuery>() {
         Ok(params) => {
-            view.data.insert("return".to_owned(), value::to_value(&try!(multimap_get_maybe_one(params, "return").map_err(OpenIdConnectError::from))));
+            view.data.insert("return".to_owned(), 
+                try!(value::to_value(&try!(multimap_get_maybe_one(params, "return").map_err(OpenIdConnectError::from)))
+                    .map_err(OpenIdConnectError::from))
+            );
             
             match LoginRequestBuilder::build_from_params(&params) {
                 Ok(login_request) => {
                     // handlebars escapes these for us
-                    view.data.insert("username".to_owned(), value::to_value(&login_request.username));
-                    view.data.insert("password".to_owned(), value::to_value(&login_request.password));
+                    view.data.insert("username".to_owned(), try!(value::to_value(&login_request.username).map_err(OpenIdConnectError::from)));
+                    view.data.insert("password".to_owned(), try!(value::to_value(&login_request.password).map_err(OpenIdConnectError::from)));
                 }
                 Err(err) => {
                     debug!("error parsing login form: {:?}", err);
@@ -136,7 +138,7 @@ pub fn login_get_handler(req: &mut Request) -> IronResult<Response> {
         }
     }
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 /// called by user agent form post

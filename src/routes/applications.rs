@@ -20,15 +20,15 @@ pub fn applications_index_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("applications/index.html", req));
     
-    view.data.insert("applications".to_owned(), value::to_value(&apps_list));
+    view.data.insert("applications".to_owned(), try!(value::to_value(&apps_list).map_err(OpenIdConnectError::from)));
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn applications_new_handler(req: &mut Request) -> IronResult<Response> {  
     let view = try!(View::new_for_session("applications/new.html", req));
 
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn applications_show_handler(req: &mut Request) -> IronResult<Response> {
@@ -41,11 +41,11 @@ pub fn applications_show_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("applications/show.html", req));
     
-    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
-    view.data.insert("redirect_uris".to_owned(), value::to_value(&client_app.redirect_uris));
-    view.data.insert("client_id".to_owned(), value::to_value(&client_id));
+    view.data.insert("client_name".to_owned(), try!(value::to_value(&client_app.client_name).map_err(OpenIdConnectError::from)));
+    view.data.insert("redirect_uris".to_owned(), try!(value::to_value(&client_app.redirect_uris).map_err(OpenIdConnectError::from)));
+    view.data.insert("client_id".to_owned(), try!(value::to_value(&client_id).map_err(OpenIdConnectError::from)));
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn applications_edit_handler(req: &mut Request) -> IronResult<Response> {
@@ -58,11 +58,11 @@ pub fn applications_edit_handler(req: &mut Request) -> IronResult<Response> {
     
     let mut view = try!(View::new_for_session("applications/edit.html", req));
     
-    view.data.insert("client_name".to_owned(), value::to_value(&client_app.client_name));
-    view.data.insert("redirect_uris".to_owned(), value::to_value(&client_app.redirect_uris));
-    view.data.insert("client_id".to_owned(), value::to_value(&client_id));
+    view.data.insert("client_name".to_owned(), try!(value::to_value(&client_app.client_name).map_err(OpenIdConnectError::from)));
+    view.data.insert("redirect_uris".to_owned(), try!(value::to_value(&client_app.redirect_uris).map_err(OpenIdConnectError::from)));
+    view.data.insert("client_id".to_owned(), try!(value::to_value(&client_id).map_err(OpenIdConnectError::from)));
     
-    Ok(Response::with((status::Ok, view.template())))
+    Ok(Response::with((status::Ok, try!(view.template().map_err(OpenIdConnectError::from)))))
 }
 
 pub fn applications_update_handler(req: &mut Request) -> IronResult<Response> {

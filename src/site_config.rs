@@ -51,7 +51,7 @@ impl From<Url> for SiteUrl {
 }
 
 impl serde::ser::Serialize for SiteUrl {
-        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
         self.url.serialize_with(serializer)
@@ -59,7 +59,7 @@ impl serde::ser::Serialize for SiteUrl {
 }
 
 impl serde::de::Deserialize for SiteUrl {
-        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<SiteUrl, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<SiteUrl, D::Error>
         where D: serde::de::Deserializer
     {
         let url: Url = try!(DeserializeWith::deserialize_with(deserializer));
@@ -101,7 +101,7 @@ impl Deref for TokenDuration {
 }
 
 impl serde::ser::Serialize for TokenDuration {
-        fn serialize<S>(&self, serializer: &mut S) -> std::result::Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
         where S: serde::Serializer,
     {
         self.duration.serialize_with(serializer)
@@ -109,7 +109,7 @@ impl serde::ser::Serialize for TokenDuration {
 }
 
 impl serde::de::Deserialize for TokenDuration {
-        fn deserialize<D>(deserializer: &mut D) -> std::result::Result<TokenDuration, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<TokenDuration, D::Error>
         where D: serde::de::Deserializer
     {
         let duration: Duration = try!(DeserializeWith::deserialize_with(deserializer));
