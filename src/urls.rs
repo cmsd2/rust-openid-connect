@@ -66,13 +66,13 @@ impl ToQueryPairs for HashMap<String, Vec<String>> {
 }
 
 pub fn serialize_query_pairs(params: HashMap<String, Vec<String>>) -> String {
-    let serializer = url::form_urlencoded::Serializer::new(String::new());
+    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
     serializer.extend_pairs(params.to_query_pairs());
     serializer.finish()
 }
 
 pub fn serialize_query_pairs_vec(params: Vec<(String, String)>) -> String {
-    let serializer = url::form_urlencoded::Serializer::new(String::new());
+    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
     serializer.extend_pairs(params);
     serializer.finish()
 }
@@ -93,7 +93,8 @@ pub fn relative_url(req: &mut Request, s: &str, maybe_params: Option<HashMap<Str
         .collect();
 
     uri.set_path(&path);
-    uri.set_query(maybe_params.map(serialize_query_pairs).map(|s| &s[..]));
+    let pairs = maybe_params.map(serialize_query_pairs);
+    uri.set_query(pairs.as_ref().map(|s| &s[..]));
     uri.set_fragment(None);
     
     iron::Url::from_generic_url(uri).map_err(|e| OpenIdConnectError::UrlError(e))

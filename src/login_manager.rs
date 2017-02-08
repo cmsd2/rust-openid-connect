@@ -4,8 +4,9 @@ use iron::prelude::*;
 use iron::middleware;
 use iron::typemap::Key;
 use iron::modifier;
-use oven;
-use oven::prelude::*;
+use iron_sessionstorage::traits::*;
+use iron_sessionstorage::SessionStorage;
+use iron_sessionstorage::backends::SignedCookieBackend;
 use persistent;
 use cookie::Cookie;
 use result::Result;
@@ -40,12 +41,11 @@ impl LoginConfig {
     /// Construct a configuration instance with default values
     pub fn defaults() -> Self {
         LoginConfig {
-            cookie_base: {
-                let mut c = Cookie::new("logged_in_user".to_owned(), "".to_owned());
-                c.httponly = true;
-                c.path = Some("/".to_owned());
-                c
-            },
+            cookie_base: Cookie::build("logged_in_user".to_owned(), "".to_owned())
+                    .http_only(true)
+                    .path("/")
+                    .secure(true)
+                    .finish()
         }
     }
     
@@ -63,16 +63,17 @@ impl middleware::AroundMiddleware for LoginManager {
         let mut ch = Chain::new(handler);
         let key = self.signing_key;
 
-        ch.link(oven::new(key));
+        ch.link_around(SessionStorage::new(SignedCookieBackend::new(key)));
         ch.link(persistent::Read::<LoginConfig>::both(self.config));
 
         Box::new(ch)
     }
 }
 
-pub struct LoginModifier<U: LoginSession> {
+/*pub struct LoginModifier<U: LoginSession> {
     login: Login<U>
 }
+
 impl <U: LoginSession> modifier::Modifier<Response> for LoginModifier<U> {
     fn modify(self, response: &mut Response) {
         response.set_cookie({
@@ -81,7 +82,7 @@ impl <U: LoginSession> modifier::Modifier<Response> for LoginModifier<U> {
             x
         });
     }
-}
+}*/
 
 #[derive(Clone, Debug)]
 pub struct Login<U: LoginSession> {
@@ -97,11 +98,11 @@ impl <U: LoginSession> Login<U> {
         }
     }
     
-    pub fn cookie(&self) -> LoginModifier<U> {
+    /*pub fn cookie(&self) -> LoginModifier<U> {
         LoginModifier {
             login: (*self).clone()
         }
-    }
+    }*/
 }
 
 pub trait LoginSession: Clone + Send + Sync + Sized {

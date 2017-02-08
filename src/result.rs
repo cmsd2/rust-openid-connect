@@ -6,6 +6,7 @@ use std::string;
 use rustc_serialize::base64::FromBase64Error;
 use iron::prelude::*;
 use iron::status;
+use iron;
 use urlencoded;
 use bodyparser;
 use serde_json;
@@ -217,7 +218,7 @@ quick_error! {
             cause(e)
         }
         
-        SslError(e: openssl::ssl::error::Error) {
+        SslError(e: openssl::error::Error) {
             from()
             description("ssl error")
             display("SSL Error: {}", e)
@@ -241,6 +242,11 @@ quick_error! {
             description("unknown token_endpoint_auth_method")
             display("unknown token_endpoint_auth_method: {}", s)
         }
+
+        IronError(e: Box<iron::error::Error + Send>) {
+            description("iron error")
+            display("iron error: {:?}", e)
+        }
     }
 }
 
@@ -262,6 +268,12 @@ impl From<OpenIdConnectError> for IronError {
         let status_code = error_status_code(&err);
         
         IronError::new(err, status_code)
+    }
+}
+
+impl From<IronError> for OpenIdConnectError {
+    fn from(err: IronError) -> OpenIdConnectError {
+        OpenIdConnectError::IronError(err.error)
     }
 }
 

@@ -3,6 +3,7 @@ use std::io::Read;
 use serde_json;
 use iron::prelude::*;
 use iron::status;
+use iron_sessionstorage::traits::*;
 
 use config::Config;
 use result::*;
@@ -44,6 +45,7 @@ pub fn session_get_handler(req: &mut Request) -> IronResult<Response> {
 }
 
 pub fn session_post_handler(req: &mut Request) -> IronResult<Response> {
+    let login_config = try!(LoginConfig::get_config(req));
     let config = try!(Config::get(req));
     
     let creds = try!(parse_credentials(req));
@@ -51,13 +53,12 @@ pub fn session_post_handler(req: &mut Request) -> IronResult<Response> {
     debug!("received credentials: {:?}", creds);
     
     // TODO use generic session_controller.login
-    match config.session_controller.sessions.authenticate(&creds) {
+    match config.session_controller.authenticate(&creds) {
         Ok(session) => {
             let session_json = try!(serialize_session(&session));
             
             Ok(Response::new()
                 .set(status::Ok)
-                .set(Login::new(&config.session_controller.login_manager.config, Some(session)).cookie())
                 .set(session_json))
         },
         Err(OpenIdConnectError::InvalidUsernameOrPassword) => {

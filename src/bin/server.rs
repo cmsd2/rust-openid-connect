@@ -1,6 +1,3 @@
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
-
 extern crate openid_connect;
 extern crate serde;
 extern crate serde_json;
@@ -25,8 +22,7 @@ use iron::{AfterMiddleware};
 use mount::Mount;
 use staticfile::Static;
 use router::Router;
-use logger::Logger;
-use logger::format::Format;
+use logger::{Logger, Format};
 use jsonwebtoken::crypto::mac_signer::MacSigner;
 
 use openid_connect::routes::home::*;
@@ -66,8 +62,8 @@ impl AfterMiddleware for ErrorRenderer {
 
 pub fn main() {
     env_logger::init().unwrap();
-    let format = Format::new(FORMAT, vec![], vec![]);
-    let (logger_before, logger_after) = Logger::new(Some(format.unwrap()));
+    let format = Format::new(FORMAT);
+    let (logger_before, logger_after) = Logger::new(format);
     
     let user_repo = Arc::new(Box::new(InMemoryUserRepo::new()) as Box<UserRepo>);
     user_repo.add_user(User::new("1".to_owned(), "admin".to_owned(), Some("admin".to_owned()))).unwrap();
@@ -94,9 +90,8 @@ pub fn main() {
     let cookie_signing_key = b"My secret key"[..].to_owned();
     let mac_signer = MacSigner::new("secret").unwrap();
     
-    let sessions = Arc::new(Box::new(sessions::InMemorySessions::new(user_repo.clone())) as Box<sessions::Sessions>);
     let login_manager = login_manager::LoginManager::new(cookie_signing_key);
-    let sessions_controller = sessions::SessionController::new(sessions, login_manager.clone());
+    let sessions_controller = sessions::SessionController::new(user_repo.clone(), login_manager.clone());
     
     let config = Config::new(mac_signer, user_repo.clone(), application_repo.clone(), grant_repo.clone(), token_repo.clone(), sessions_controller.clone());
     
@@ -107,37 +102,37 @@ pub fn main() {
     let woidc = openid_config::WellKnownOpenIdConfiguration::new_for_site(&site_config);
     
     let mut router = Router::new();
-    router.get("/", web_handler(&config, home_handler));
-    router.get("/register", web_handler(&config, register_get_handler));
-    router.post("/register", web_handler(&config, register_post_handler));
-    router.get("/login", web_handler(&config, login_get_handler));
-    router.post("/login", web_handler(&config, login_post_handler));
-    router.get("/applications", web_handler(&config, applications::applications_index_handler));
-    router.get("/applications/new", web_handler(&config, applications::applications_new_handler));
-    router.get("/applications/:id", web_handler(&config, applications::applications_show_handler));
-    router.get("/applications/:id/edit", web_handler(&config, applications::applications_edit_handler));
-    router.post("/applications/:id", web_handler(&config, applications::applications_update_handler));
-    router.post("/applications", web_handler(&config, applications::applications_create_handler));
+    router.get("/", web_handler(&config, home_handler), "home");
+    router.get("/register", web_handler(&config, register_get_handler), "register_get");
+    router.post("/register", web_handler(&config, register_post_handler), "register_post");
+    router.get("/login", web_handler(&config, login_get_handler), "login_get");
+    router.post("/login", web_handler(&config, login_post_handler), "login_post");
+    router.get("/applications", web_handler(&config, applications::applications_index_handler), "applications_index");
+    router.get("/applications/new", web_handler(&config, applications::applications_new_handler), "applications_new");
+    router.get("/applications/:id", web_handler(&config, applications::applications_show_handler), "applications_show");
+    router.get("/applications/:id/edit", web_handler(&config, applications::applications_edit_handler), "applications_edit");
+    router.post("/applications/:id", web_handler(&config, applications::applications_update_handler), "applications_update");
+    router.post("/applications", web_handler(&config, applications::applications_create_handler), "applications_create");
     /*router.get("/applications/:id/delete", web_handler(&config, applications::applications_delete_handler));
     router.post("/applications/:id/delete", web_handler(&config, applications::applications_delete_handler));*/
     
-    router.get("/grants", web_handler(&config, grants::grants_index_handler));
-    router.get("/grants/:id", web_handler(&config, grants::grants_show_handler));
-    router.get("/grants/:id/edit", web_handler(&config, grants::grants_edit_handler));
-    router.post("/grants/:id", web_handler(&config, grants::grants_update_handler));
+    router.get("/grants", web_handler(&config, grants::grants_index_handler), "grants_index");
+    router.get("/grants/:id", web_handler(&config, grants::grants_show_handler), "grants_show");
+    router.get("/grants/:id/edit", web_handler(&config, grants::grants_edit_handler), "grants_edit");
+    router.post("/grants/:id", web_handler(&config, grants::grants_update_handler), "grants_update");
     //TODO delete
     
     
     
     let mut api_router = Router::new();
-    api_router.get("/session", api_handler(&config, session_get_handler));
-    api_router.post("/session", api_handler(&config, session_post_handler));
-    api_router.delete("/session", api_handler(&config, session_delete_handler));
+    api_router.get("/session", api_handler(&config, session_get_handler), "session_get");
+    api_router.post("/session", api_handler(&config, session_post_handler), "session_post");
+    api_router.delete("/session", api_handler(&config, session_delete_handler), "session_delete");
     
-    api_router.get("/applications", api_handler(&config, applications_get_handler));
-    api_router.post("/applications", api_handler(&config, applications_post_handler));
-    api_router.put("/applications/:id", api_handler(&config, applications_put_handler));
-    api_router.delete("/applications/:id", api_handler(&config, applications_delete_handler));
+    api_router.get("/applications", api_handler(&config, applications_get_handler), "api_applications_get");
+    api_router.post("/applications", api_handler(&config, applications_post_handler), "api_applications_post");
+    api_router.put("/applications/:id", api_handler(&config, applications_put_handler), "api_applications_put");
+    api_router.delete("/applications/:id", api_handler(&config, applications_delete_handler), "api_applications_delete");
     
     let well_known_router = oauth2::well_known_router(&config);
     

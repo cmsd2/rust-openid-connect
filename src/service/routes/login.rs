@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
+use iron_sessionstorage::traits::*;
 use urlencoded::*;
 use serde_json::value;
 
@@ -162,7 +163,13 @@ pub fn login_post_handler(req: &mut Request) -> IronResult<Response> {
     
     match config.session_controller.login_with_credentials(req) {
         Ok(login) => {
-            Ok(Response::with((status::Found, Redirect(try!(redirect_back_url(req, &params)).unwrap_or(home_url)))).set(login.cookie()))
+            if let Some(session) = login.session {
+                try!(req.session().set(session));
+
+                Ok(Response::with((status::Found, Redirect(try!(redirect_back_url(req, &params)).unwrap_or(home_url)))))
+            } else {
+                Err(IronError::from(OpenIdConnectError::NoSessionLoaded))
+            }
         },
         Err(err) => {
             debug!("error logging in: {:?}", err);

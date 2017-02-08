@@ -2,6 +2,7 @@
 #![recursion_limit="200"]
 
 extern crate iron;
+extern crate iron_sessionstorage;
 extern crate router;
 extern crate bodyparser;
 extern crate urlencoded;
@@ -15,7 +16,6 @@ extern crate serde_json;
 extern crate rustc_serialize;
 extern crate rand;
 extern crate url;
-extern crate oven;
 extern crate cookie;
 extern crate persistent;
 extern crate plugin;

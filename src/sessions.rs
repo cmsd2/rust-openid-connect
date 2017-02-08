@@ -6,13 +6,15 @@ use rand;
 use rand::Rng;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
+use serde_json;
 
 use rustc_serialize::base64;
 use rustc_serialize::base64::ToBase64;
 use iron::prelude::*;
 use iron::BeforeMiddleware;
 use iron::typemap::Key;
-use oven::prelude::*;
+use iron_sessionstorage;
+use iron_sessionstorage::traits::*;
 use persistent;
 use plugin;
 use plugin::Extensible;
@@ -66,6 +68,18 @@ impl UserSession {
             user_id: Some(user_id),
             session_id: Some(session_id),
             authenticated: false,
+        }
+    }
+}
+
+impl iron_sessionstorage::Value for UserSession {
+    fn get_key() -> &'static str { "logged_in_user" }
+    fn into_raw(self) -> String { serde_json::to_string(&self).unwrap_or(String::new()) }
+    fn from_raw(value: String) -> Option<Self> {
+        if value.is_empty() {
+            None
+        } else {
+            serde_json::from_str(&value).map(|s| Some(s)).unwrap_or(None)
         }
     }
 }
@@ -172,52 +186,34 @@ impl Sessions for InMemorySessions {
 
 #[derive(Clone)]
 pub struct SessionController {
-    pub sessions: Arc<Box<Sessions>>,
+    pub users: Arc<Box<UserRepo>>,
     pub login_manager: LoginManager,
 }
 
 impl SessionController {
-    pub fn new(sessions: Arc<Box<Sessions>>, login_manager: LoginManager) -> Self {
+    pub fn new(user_repo: Arc<Box<UserRepo>>, login_manager: LoginManager) -> Self {
         SessionController {
-            sessions: sessions,
+            users: user_repo,
             login_manager: login_manager,
         }
     }
-    
-    pub fn load_session_id(&self, req: &mut Request) -> Result<Option<String>> {
-        debug!("loading session id");
-        let config = try!(req.get::<persistent::Read<LoginConfig>>());
-                
-        let session = match req.get_cookie(&config.cookie_base.name()) {
-            Some(c) if !c.value.is_empty() => {
-                Some(c.value.clone())
-            },
-            _ => None,
-        };
 
-        Ok(session)
+    pub fn load_session_cookie(&self, req: &mut Request) -> Result<Option<UserSession>> {
+        req.session().get::<UserSession>().map_err(OpenIdConnectError::from)
     }
 
     pub fn load_session(&self, req: &mut Request) -> Result<Option<UserSession>> {
         debug!("loading session");
     
-        let session = if let Some(session_id) = try!(self.load_session_id(req)) {
-            debug!("looking up session {}", session_id);
-            try!(self.sessions.lookup(&session_id))
-        } else {
-            None
-        };
-        
-        Ok(session)
+        self.load_session_cookie(req).map_err(OpenIdConnectError::from)
     }
     
     pub fn clear_session(&self, req: &mut Request) -> Result<bool> {
         debug!("clearing session");
-        if let Some(session_id) = try!(self.load_session_id(req)) {
-            self.sessions.remove(&session_id)
-        } else {
-            Ok(false)
-        }
+
+        try!(req.session().clear());
+
+        Ok(true)
     }
     
     /// Login with credentials if provided.
@@ -248,7 +244,7 @@ impl SessionController {
         let session = if username.is_some() || password.is_some() {
             let creds = Credentials::new(username.unwrap_or(""), password.unwrap_or(""));
             
-            let session = try!(self.sessions.authenticate(&creds));
+            let session = try!(self.authenticate(&creds));
             
             Some(session)
         } else {
@@ -274,6 +270,33 @@ impl SessionController {
         let login_modifier = Login::new(&login_config, session);
 
         Ok(login_modifier)
+    }
+
+    pub fn authenticate(&self, creds: &Credentials) -> Result<UserSession> {
+        if let Some(user) = try!(self.users.find_user(&creds.username)) {
+            if user.password.as_ref() == Some(&creds.password) {
+                let mut session = self.new_session(&user.id, &user.username);
+                session.authenticated = true;
+                
+                Ok(session)
+            } else {
+                // TODO add random wait jitter
+                Err(OpenIdConnectError::InvalidUsernameOrPassword)
+            }
+        } else {
+            // TODO add random wait jitter
+            Err(OpenIdConnectError::InvalidUsernameOrPassword)
+        }
+    }
+
+    fn new_session(&self, user_id: &str, username: &str) -> UserSession {
+        UserSession::new(user_id.to_owned(), username.to_owned(), self.new_session_id())
+    }
+
+    fn new_session_id(&self) -> String {
+        let mut id = vec![0u8; 16];
+        rand::thread_rng().fill_bytes(id.as_mut_slice());
+        id.to_base64(base64::STANDARD)
     }
 }
 

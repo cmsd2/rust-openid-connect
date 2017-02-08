@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use iron::prelude::*;
 use iron::status;
 use iron::modifiers::Redirect;
+use iron_sessionstorage::traits::*;
 use urlencoded::{UrlEncodedBody, UrlEncodedQuery};
 use serde_json::value;
 
@@ -143,8 +144,14 @@ pub fn register_post_handler(req: &mut Request) -> IronResult<Response> {
                     // TODO send email to user with confirmation token
                     
                     let login = try!(config.session_controller.login_with_credentials(req));
+
+                    if let Some(session) = login.session {
+                        try!(req.session().set(session));
                     
-                    Ok(Response::with((status::Found, Redirect(home_url))).set(login.cookie()))
+                        Ok(Response::with((status::Found, Redirect(home_url))))
+                    } else {
+                        return Err(IronError::from(OpenIdConnectError::NoSessionLoaded));
+                    }
                 },
                 Err(err) => {
                     debug!("user validation errors: {:?}", err);
